@@ -55,8 +55,8 @@ jobs:
 
       - name: Coveralls
         # Make the coverage report and upload
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: matrix.test == 'coveralls'
         run: |
           coverage run --source=axidence -m pytest -v
