@@ -25,8 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ "ubuntu-latest" ]
-        python-version: [ 3.9, 3.10 ]
-        test: [ 'coveralls', 'pytest' ]
+        python-version: [ "3.9", "3.10" ]
+        test: [ "coveralls", "pytest" ]
 
     steps:
       # Setup and installation
