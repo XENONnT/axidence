@@ -3,7 +3,7 @@
 #    python versions
 #  - Coveralls -> this is to see if we are covering all our lines of
 #    code with our tests. The results get uploaded to
-#    coveralls.io/github/XENONnT/axidence
+#    coveralls.io/github/dachengx/axidence
 #  - pytest_no_database -> we want to make sure we can run the tests even
 #    if we don't have access to our database since this will e.g. happen
 #    when someone is pushing a PR from their own fork as we don't
