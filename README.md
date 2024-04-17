@@ -7,6 +7,3 @@ Axidence is a stax-based data-driven accidental coincidence background simulatio
 cd axidence
 pip install ./ --user
 ```
-
-# Tutorial
-Please check notebooks in `notebooks/`

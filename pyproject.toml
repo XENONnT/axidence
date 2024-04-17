@@ -1,3 +1,36 @@
-[tool.black]
-line-length = 100
-preview = true
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "axidence"
+version = "0.0.0"
+description = "strax-based data-driven accidental coincidence background simulation and peak-level salting"
+readme = "README.md"
+license.file = "LICENSE"
+authors = [
+  { name = "Dacheng Xu", email = "dx2227@columbia.edu" },
+]
+maintainers = [
+  { name = "Dacheng Xu", email = "dx2227@columbia.edu" },
+]
+requires-python = ">=3.9"
+
+dependencies = [
+  "strax>=1.6.0",
+  "straxen>=2.2.0",
+]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.urls]
+Homepage = "https://github.com/dachengx/axidence"
+Documentation = "https://readthedocs.org/projects/axidence/"
