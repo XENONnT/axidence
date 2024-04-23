@@ -17,8 +17,8 @@ maintainers = [
 requires-python = ">=3.9"
 
 dependencies = [
-  "strax>=1.6.0",
-  "straxen>=2.2.0",
+  "strax @ git+https://github.com/AxFoundation/strax.git",
+  "straxen @ git+https://github.com/XENONnT/straxen.git",
 ]
 
 classifiers = [
