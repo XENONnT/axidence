@@ -1,8 +1,7 @@
 import numba
 import numpy as np
 import strax
-from strax import Plugin
-from straxen import PeakProximity, PeakShadow, PeakAmbience
+from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakSEDensity
 
 from axidence.plugin import InferDtypePlugin
 
@@ -99,11 +98,22 @@ class SaltingPeakAmbience(PeakAmbience):
         return result
 
 
-class SaltingPeakSEDensity(Plugin):
+class SaltingPeakSEDensity(PeakSEDensity):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "peak_basics", "peak_positions")
     provides = "salting_peak_se_density"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def infer_dtype(self):
+        dtype = super().infer_dtype()
+        dtype += [
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
+
+    def compute(self, salting_peaks, peaks):
+        se_density = self.compute_se_density(peaks, salting_peaks)
+        return dict(
+            time=salting_peaks["time"], endtime=strax.endtime(salting_peaks), se_density=se_density
+        )
