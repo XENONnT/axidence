@@ -111,6 +111,8 @@ class SaltingEvents(EventBasics, EventPositions):
             ]
         )
         for n in (
+            "time",
+            "endtime",
             "s1_center_time",
             "s2_center_time",
             "s1_area",
@@ -135,7 +137,7 @@ class SaltingEvents(EventBasics, EventPositions):
                 raise ValueError(f"Could not find {n} in dtype_reference!")
         # since event_number is int64 in event_basics
         dtype += [(("Salting number of events", "salt_number"), np.int64)]
-        return dtype + strax.time_fields
+        return dtype
 
     def init_rng(self):
         if self.salting_seed is None:
@@ -177,7 +179,7 @@ class SaltingEvents(EventBasics, EventPositions):
         return time
 
     def inverse_field_distortion(self, x, y, z):
-        # TODO:
+        # TODO: implement detailed inverse field distortion
         return x, y, z
 
     def set_chunk_splitting(self):
@@ -233,15 +235,23 @@ class SaltingEvents(EventBasics, EventPositions):
             + self.electron_drift_time_gate
         )
 
+        self.s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
+        self.s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
         self.salting_events["s1_area"] = np.exp(
             self.rng.uniform(
                 np.log(self.s1_area_range[0]), np.log(self.s1_area_range[1]), size=self.n_events
             )
         )
+        self.salting_events["s1_area"] = np.clip(
+            self.salting_events["s1_area"], *self.s1_area_range
+        )
         self.salting_events["s2_area"] = np.exp(
             self.rng.uniform(
                 np.log(self.s2_area_range[0]), np.log(self.s2_area_range[1]), size=self.n_events
             )
+        )
+        self.salting_events["s2_area"] = np.clip(
+            self.salting_events["s2_area"], *self.s2_area_range
         )
 
         self.set_chunk_splitting()
