@@ -235,24 +235,16 @@ class SaltingEvents(EventBasics, EventPositions):
             + self.electron_drift_time_gate
         )
 
-        self.s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
-        self.s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
+        s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
+        s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
         self.salting_events["s1_area"] = np.exp(
-            self.rng.uniform(
-                np.log(self.s1_area_range[0]), np.log(self.s1_area_range[1]), size=self.n_events
-            )
+            self.rng.uniform(np.log(s1_area_range[0]), np.log(s1_area_range[1]), size=self.n_events)
         )
-        self.salting_events["s1_area"] = np.clip(
-            self.salting_events["s1_area"], *self.s1_area_range
-        )
+        self.salting_events["s1_area"] = np.clip(self.salting_events["s1_area"], *s1_area_range)
         self.salting_events["s2_area"] = np.exp(
-            self.rng.uniform(
-                np.log(self.s2_area_range[0]), np.log(self.s2_area_range[1]), size=self.n_events
-            )
+            self.rng.uniform(np.log(s2_area_range[0]), np.log(s2_area_range[1]), size=self.n_events)
         )
-        self.salting_events["s2_area"] = np.clip(
-            self.salting_events["s2_area"], *self.s2_area_range
-        )
+        self.salting_events["s2_area"] = np.clip(self.salting_events["s2_area"], *s2_area_range)
 
         self.set_chunk_splitting()
 
