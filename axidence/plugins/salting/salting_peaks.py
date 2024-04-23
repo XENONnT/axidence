@@ -3,10 +3,10 @@ import strax
 import straxen
 from straxen import PeakBasics
 
-from axidence.plugin import InferDtypePlugin
+from axidence.utils import copy_dtype
 
 
-class SaltingPeaks(PeakBasics, InferDtypePlugin):
+class SaltingPeaks(PeakBasics):
     __version__ = "0.0.0"
     depends_on = "salting_events"
     provides = "salting_peaks"
@@ -26,6 +26,7 @@ class SaltingPeaks(PeakBasics, InferDtypePlugin):
     )
 
     def refer_dtype(self):
+        # merged_dtype is needed because the refer_dtype should return a list
         return strax.merged_dtype(
             [
                 strax.to_numpy_dtype(super(SaltingPeaks, self).infer_dtype()),
@@ -36,7 +37,7 @@ class SaltingPeaks(PeakBasics, InferDtypePlugin):
         dtype_reference = self.refer_dtype()
         required_names = ["time", "endtime", "center_time"]
         required_names += ["area", "n_hits", "tight_coincidence", "type"]
-        dtype = self.copy_dtype(dtype_reference, required_names)
+        dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [
             ("x", np.float32, "Reconstructed S2 X position (cm), uncorrected"),

@@ -7,7 +7,7 @@ import straxen
 from straxen import units, EventBasics, EventPositions
 from straxen.misc import kind_colors
 
-from axidence.plugin import InferDtypePlugin
+from axidence.utils import copy_dtype
 
 
 kind_colors.update(
@@ -18,7 +18,7 @@ kind_colors.update(
 )
 
 
-class SaltingEvents(EventPositions, EventBasics, InferDtypePlugin):
+class SaltingEvents(EventPositions, EventBasics):
     __version__ = "0.0.0"
     depends_on: Tuple = tuple()
     provides = "salting_events"
@@ -117,7 +117,7 @@ class SaltingEvents(EventPositions, EventBasics, InferDtypePlugin):
         required_names = ["time", "endtime", "s1_center_time", "s2_center_time"]
         required_names += ["s1_area", "s2_area", "s1_n_hits", "s1_tight_coincidence"]
         required_names += ["x", "y", "z", "drift_time", "s2_x", "s2_y", "z_naive"]
-        dtype = self.copy_dtype(dtype_reference, required_names)
+        dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [(("Salting number of events", "salt_number"), np.int64)]
         return dtype

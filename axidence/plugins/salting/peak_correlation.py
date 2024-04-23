@@ -3,10 +3,10 @@ import numpy as np
 import strax
 from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakSEDensity
 
-from axidence.plugin import InferDtypePlugin
+from axidence.utils import copy_dtype
 
 
-class SaltingPeakProximity(PeakProximity, InferDtypePlugin):
+class SaltingPeakProximity(PeakProximity):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "peak_basics")
     provides = "salting_peak_proximity"
@@ -19,7 +19,7 @@ class SaltingPeakProximity(PeakProximity, InferDtypePlugin):
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
         required_names = ["time", "endtime", "n_competing", "n_competing_left"]
-        dtype = self.copy_dtype(dtype_reference, required_names)
+        dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [
             (("Salting number of peaks", "salt_number"), np.int64),

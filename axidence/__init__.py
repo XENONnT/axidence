@@ -3,6 +3,8 @@ __version__ = "0.0.0"
 from . import dtypes
 from .dtypes import *
 
+from .utils import *
+
 from .plugin import *
 
 from . import plugins
