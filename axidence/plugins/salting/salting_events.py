@@ -7,6 +7,8 @@ import straxen
 from straxen import units, EventBasics, EventPositions
 from straxen.misc import kind_colors
 
+from axidence.plugin import InferDtypePlugin
+
 
 kind_colors.update(
     {
@@ -16,7 +18,7 @@ kind_colors.update(
 )
 
 
-class SaltingEvents(EventBasics, EventPositions):
+class SaltingEvents(EventPositions, EventBasics, InferDtypePlugin):
     __version__ = "0.0.0"
     depends_on: Tuple = tuple()
     provides = "salting_events"
@@ -102,39 +104,20 @@ class SaltingEvents(EventBasics, EventPositions):
         self.posrec_save = []
         self.pos_rec_labels = []
 
-    def infer_dtype(self):
-        dtype = []
-        dtype_reference = strax.merged_dtype(
+    def refer_dtype(self):
+        return strax.merged_dtype(
             [
-                strax.to_numpy_dtype(super().infer_dtype()),
-                strax.to_numpy_dtype(super(EventBasics, self).infer_dtype()),
+                strax.to_numpy_dtype(super(EventPositions, self).infer_dtype()),
+                strax.to_numpy_dtype(super(SaltingEvents, self).infer_dtype()),
             ]
         )
-        for n in (
-            "time",
-            "endtime",
-            "s1_center_time",
-            "s2_center_time",
-            "s1_area",
-            "s2_area",
-            "s1_n_hits",
-            "s1_tight_coincidence",
-            "x",
-            "y",
-            "z",
-            "drift_time",
-            "s2_x",
-            "s2_y",
-            "z_naive",
-        ):
-            for x in dtype_reference:
-                found = False
-                if (x[0][1] == n) and (not found):
-                    dtype.append(x)
-                    found = True
-                    break
-            if not found:
-                raise ValueError(f"Could not find {n} in dtype_reference!")
+
+    def infer_dtype(self):
+        dtype_reference = self.refer_dtype()
+        required_names = ["time", "endtime", "s1_center_time", "s2_center_time"]
+        required_names += ["s1_area", "s2_area", "s1_n_hits", "s1_tight_coincidence"]
+        required_names += ["x", "y", "z", "drift_time", "s2_x", "s2_y", "z_naive"]
+        dtype = self.copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [(("Salting number of events", "salt_number"), np.int64)]
         return dtype

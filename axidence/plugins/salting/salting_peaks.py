@@ -1,46 +1,17 @@
 import numpy as np
 import strax
 import straxen
-from straxen import PeakBasics, PeakPositionsNT
+from straxen import PeakBasics
+
+from axidence.plugin import InferDtypePlugin
 
 
-class SaltingPeaks(PeakBasics, PeakPositionsNT):
+class SaltingPeaks(PeakBasics, InferDtypePlugin):
     __version__ = "0.0.0"
     depends_on = "salting_events"
     provides = "salting_peaks"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
-
-    def infer_dtype(self):
-        dtype = []
-        dtype_reference = strax.merged_dtype(
-            [
-                strax.to_numpy_dtype(super().infer_dtype()),
-                strax.to_numpy_dtype(super(PeakPositionsNT, self).infer_dtype()),
-            ]
-        )
-        for n in (
-            "time",
-            "endtime",
-            "center_time",
-            "area",
-            "n_hits",
-            "tight_coincidence",
-            "x",
-            "y",
-            "type",
-        ):
-            for x in dtype_reference:
-                found = False
-                if (x[0][1] == n) and (not found):
-                    dtype.append(x)
-                    found = True
-                    break
-            if not found:
-                raise ValueError(f"Could not find {n} in dtype_reference!")
-        # since event_number is int64 in event_basics
-        dtype += [(("Salting number of peaks", "salt_number"), np.int64)]
-        return dtype
 
     only_salt_s1 = straxen.URLConfig(
         default=False,
@@ -53,6 +24,26 @@ class SaltingPeaks(PeakBasics, PeakPositionsNT):
         type=bool,
         help="Whether only salt S2",
     )
+
+    def refer_dtype(self):
+        return strax.merged_dtype(
+            [
+                strax.to_numpy_dtype(super(SaltingPeaks, self).infer_dtype()),
+            ]
+        )
+
+    def infer_dtype(self):
+        dtype_reference = self.refer_dtype()
+        required_names = ["time", "endtime", "center_time"]
+        required_names += ["area", "n_hits", "tight_coincidence", "type"]
+        dtype = self.copy_dtype(dtype_reference, required_names)
+        # since event_number is int64 in event_basics
+        dtype += [
+            ("x", np.float32, "Reconstructed S2 X position (cm), uncorrected"),
+            ("y", np.float32, "Reconstructed S2 Y position (cm), uncorrected"),
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
 
     def compute(self, salting_events):
         salting_peaks = np.empty(len(salting_events) * 2, dtype=self.dtype)
