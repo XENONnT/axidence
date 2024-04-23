@@ -2,7 +2,7 @@ import numba
 import numpy as np
 import strax
 from strax import Plugin
-from straxen import PeakProximity
+from straxen import PeakProximity, PeakShadow, PeakAmbience
 
 from axidence.plugin import InferDtypePlugin
 
@@ -59,24 +59,44 @@ class SaltingPeakProximity(PeakProximity, InferDtypePlugin):
         return n_left, n_tot
 
 
-class SaltingPeakShadow(Plugin):
+class SaltingPeakShadow(PeakShadow):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "peak_basics", "peak_positions")
     provides = "peak_shadow"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def infer_dtype(self):
+        dtype = super().infer_dtype()
+        dtype += [
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
+
+    def compute(self, salting_peaks, peaks):
+        result = self.compute_shadow(peaks, salting_peaks)
+        result["salt_number"] = salting_peaks["salt_number"]
+        return result
 
 
-class SaltingPeakAmbience(Plugin):
+class SaltingPeakAmbience(PeakAmbience):
     __version__ = "0.0.0"
-    depends_on = ("salting_peaks", "peak_basics", "peak_positions")
+    depends_on = ("salting_peaks", "lone_hits", "peak_basics", "peak_positions")
     provides = "peak_ambience"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def infer_dtype(self):
+        dtype = super().infer_dtype()
+        dtype += [
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
+
+    def compute(self, salting_peaks, lone_hits, peaks):
+        result = self.compute_ambience(lone_hits, peaks, salting_peaks)
+        result["salt_number"] = salting_peaks["salt_number"]
+        return result
 
 
 class SaltingPeakSEDensity(Plugin):
