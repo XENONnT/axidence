@@ -2,7 +2,7 @@ import strax
 from strax import Plugin
 
 
-class SaltingEventShadow(Plugin):
+class SaltedEventShadow(Plugin):
     __version__ = "0.0.0"
     depends_on = ("event_basics", "salting_peaks", "peak_shadow")
     provides = "event_shadow"
@@ -12,7 +12,7 @@ class SaltingEventShadow(Plugin):
     dtype = strax.time_fields
 
 
-class SaltingEventAmbience(Plugin):
+class SaltedEventAmbience(Plugin):
     __version__ = "0.0.0"
     depends_on = ("event_basics", "salting_peaks", "peak_ambience")
     provides = "event_ambience"
@@ -22,7 +22,7 @@ class SaltingEventAmbience(Plugin):
     dtype = strax.time_fields
 
 
-class SaltingEventSEDensity(Plugin):
+class SaltedEventSEDensity(Plugin):
     __version__ = "0.0.0"
     depends_on = (
         "event_basics",

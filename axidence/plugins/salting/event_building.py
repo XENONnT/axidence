@@ -2,7 +2,7 @@ import strax
 from strax import Plugin
 
 
-class SaltingEvents(Plugin):
+class SaltedEvents(Plugin):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "salting_peak_proximity", "peak_basics")
     provides = "events"
@@ -12,7 +12,7 @@ class SaltingEvents(Plugin):
     dtype = strax.time_fields
 
 
-class SaltingEventBasics(Plugin):
+class SaltedEventBasics(Plugin):
     __version__ = "0.0.0"
     depends_on = ("events", "salting_peaks", "peak_basics", "peak_positions")
     provides = "event_basics"

@@ -1,3 +1,6 @@
+from . import salting_events
+from .salting_events import *
+
 from . import salting_peaks
 from .salting_peaks import *
 
