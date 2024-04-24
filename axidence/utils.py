@@ -19,3 +19,27 @@ def copy_dtype(dtype_reference, required_names):
         if not found:
             raise ValueError(f"Could not find {n} in dtype_reference!")
     return dtype
+
+
+def needed_dtype(deps, dependencies_by_kind, func):
+    # intersection depends_on's dtype.names will be needed in event building
+    needed_fields = func(
+        *tuple(
+            set.union(*tuple(set(deps[d].dtype_for(d).names) for d in dk))
+            for dk in dependencies_by_kind().values()
+        )
+    )
+    dtype_reference = list(
+        func(
+            *tuple(
+                set.union(*tuple(set(deps[d].dtype_for(d).descr) for d in dk))
+                for dk in dependencies_by_kind().values()
+            )
+        )
+    )
+    _peaks_dtype = copy_dtype(dtype_reference, needed_fields)
+    if len(_peaks_dtype) != len(needed_fields):
+        raise ValueError(
+            f"Weird! Could not find all needed fields {needed_fields} in {dtype_reference}!"
+        )
+    return needed_fields, _peaks_dtype
