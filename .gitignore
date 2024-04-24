@@ -3,3 +3,6 @@ __pycache__
 .coverage
 dist
 strax_data
+resource_cache
+*.gv
+*.gv.svg

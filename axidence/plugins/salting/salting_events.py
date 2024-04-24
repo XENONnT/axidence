@@ -129,6 +129,7 @@ class SaltingEvents(EventPositions, EventBasics):
             self.rng = np.random.default_rng(seed=self.salting_seed)
 
     def init_run_meta(self):
+        """Get the start and end of the run."""
         if self.real_run_start is None or self.real_run_end is None:
             if self.strict_real_run_time_check:
                 raise ValueError("Real run start and end times are not provided!")
@@ -150,6 +151,7 @@ class SaltingEvents(EventPositions, EventBasics):
             self.run_end = self.real_run_end
 
     def sample_time(self):
+        """Sample the time according to the start and end of the run."""
         self.event_time_interval = units.s // self.salting_rate
 
         time = np.arange(
@@ -166,6 +168,7 @@ class SaltingEvents(EventPositions, EventBasics):
         return x, y, z
 
     def set_chunk_splitting(self):
+        """Split the rujn into chunks to prevent oversize chunk."""
         self.max_n_events_in_chunk = round(
             self.chunk_target_size_mb * 1e6 / self.dtype.itemsize * 0.9
         )
@@ -180,6 +183,7 @@ class SaltingEvents(EventPositions, EventBasics):
         self.time_right = self.event_time_interval - self.time_left
 
     def setup(self):
+        """Sample the features of events."""
         super().setup()
 
         self.init_rng()
@@ -232,6 +236,7 @@ class SaltingEvents(EventPositions, EventBasics):
         self.set_chunk_splitting()
 
     def compute(self, chunk_i):
+        """Copy and assign the salting events into chunk."""
         indices = self.slices[chunk_i]
 
         if chunk_i == 0:

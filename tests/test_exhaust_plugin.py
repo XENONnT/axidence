@@ -62,6 +62,8 @@ class Exhausted(ExhaustPlugin):
 
 
 def test_exhaust_plugin():
+    """Test the ExhaustPlugin, about whether it can really exhaust the data or
+    not."""
     st = strax.Context(storage=[])
     st.register((ToExhaust, Exhausted))
     st.storage = [
