@@ -188,4 +188,7 @@ class SaltedEventBasics(EventBasics, ExhaustPlugin):
 
         self.fill_events(result, events, split_peaks)
         result["is_triggering"] = events["is_triggering"]
+
+        if np.all(result["s1_salt_number"] < 0) or np.all(result["s2_salt_number"] < 0):
+            raise ValueError("Found zero triggered salting peaks!")
         return result
