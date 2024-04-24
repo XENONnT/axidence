@@ -17,8 +17,14 @@ maintainers = [
 requires-python = ">=3.9"
 
 dependencies = [
-  "strax @ git+https://github.com/AxFoundation/strax.git",
-  "straxen @ git+https://github.com/XENONnT/straxen.git",
+  "strax",
+  "straxen",
+]
+
+[project.optional-dependencies]
+tests = [
+    "strax @ git+https://github.com/AxFoundation/strax.git",
+    "straxen @ git+https://github.com/XENONnT/straxen.git",
 ]
 
 classifiers = [
