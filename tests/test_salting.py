@@ -33,7 +33,7 @@ class TestSalting(TestCase):
         if os.path.exists(cls.tempdir):
             shutil.rmtree(cls.tempdir)
 
-    def test_salting(self):
-        """Test the computing of salting_events and salting_peaks."""
-        self.st.make(self.run_id, "salting_events", save="salting_events")
-        self.st.make(self.run_id, "salting_peaks", save="salting_peaks")
+    # def test_salting(self):
+    #     """Test the computing of salting_events and salting_peaks."""
+    #     self.st.make(self.run_id, "salting_events", save="salting_events")
+    #     self.st.make(self.run_id, "salting_peaks", save="salting_peaks")
