@@ -49,8 +49,6 @@ class SaltingPeaks(PeakBasics):
     def compute(self, salting_events):
         """Copy features of salting_events into salting_peaks."""
         salting_peaks = np.empty(len(salting_events) * 2, dtype=self.dtype)
-        for n in "time endtime".split():
-            salting_peaks[n] = np.repeat(salting_events[n], 2)
         for n in "center_time area".split():
             salting_peaks[n] = np.vstack(
                 [
@@ -58,6 +56,9 @@ class SaltingPeaks(PeakBasics):
                     salting_events[f"s2_{n}"],
                 ]
             ).T.flatten()
+        salting_peaks["time"] = salting_peaks["center_time"]
+        # add one to prevent error about non-positive length
+        salting_peaks["endtime"] = salting_peaks["time"] + 1
         for n in "n_hits tight_coincidence".split():
             salting_peaks[n] = np.vstack(
                 [

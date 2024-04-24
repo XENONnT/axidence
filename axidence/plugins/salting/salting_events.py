@@ -100,6 +100,13 @@ class SaltingEvents(EventPositions, EventBasics):
         help="Will assign the events's ``s1_n_hits`` and ``s1_tight_coincidence`` by this",
     )
 
+    n_drift_time_window = straxen.URLConfig(
+        default=5,
+        type=int,
+        track=True,
+        help="How many max drift time will the event builder extend",
+    )
+
     def _set_posrec_save(self):
         self.posrec_save = []
         self.pos_rec_labels = []
@@ -154,6 +161,9 @@ class SaltingEvents(EventPositions, EventBasics):
         """Sample the time according to the start and end of the run."""
         self.event_time_interval = units.s // self.salting_rate
 
+        if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
+            raise ValueError("Salting rate is too high according the drift time window!")
+
         time = np.arange(
             self.run_start + self.veto_length_run_start,
             self.run_end - self.veto_length_run_end,
@@ -184,7 +194,8 @@ class SaltingEvents(EventPositions, EventBasics):
 
     def setup(self):
         """Sample the features of events."""
-        super().setup()
+        super(EventPositions, self).setup()
+        super(SaltingEvents, self).setup()
 
         self.init_rng()
         self.init_run_meta()
@@ -195,8 +206,6 @@ class SaltingEvents(EventPositions, EventBasics):
         self.salting_events["salt_number"] = np.arange(self.n_events)
         self.salting_events["time"] = time
         self.salting_events["endtime"] = time
-        self.salting_events["s1_center_time"] = time
-        self.salting_events["s2_center_time"] = time
 
         self.salting_events["s1_n_hits"] = self.s1_n_hits_tight_coincidence
         self.salting_events["s1_tight_coincidence"] = self.s1_n_hits_tight_coincidence
@@ -206,21 +215,21 @@ class SaltingEvents(EventPositions, EventBasics):
         self.salting_events["x"] = np.cos(theta) * r
         self.salting_events["y"] = np.sin(theta) * r
         self.salting_events["z"] = -self.rng.random(size=self.n_events) * straxen.tpc_z
-        self.salting_events["s2_x"], self.salting_events["s2_y"], self.salting_events["z_naive"] = (
-            self.inverse_field_distortion(
-                self.salting_events["x"],
-                self.salting_events["y"],
-                self.salting_events["z"],
-            )
+        s2_x, s2_y, z_naive = self.inverse_field_distortion(
+            self.salting_events["x"],
+            self.salting_events["y"],
+            self.salting_events["z"],
         )
+        self.salting_events["s2_x"] = s2_x
+        self.salting_events["s2_y"] = s2_y
+        self.salting_events["z_naive"] = z_naive
         self.salting_events["drift_time"] = (
-            -(
-                self.salting_events["z_naive"]
-                - self.electron_drift_velocity * self.electron_drift_time_gate
-            )
-            / self.electron_drift_velocity
-            + self.electron_drift_time_gate
-        )
+            self.electron_drift_velocity * self.electron_drift_time_gate
+            - self.salting_events["z_naive"]
+        ) / self.electron_drift_velocity
+
+        self.salting_events["s1_center_time"] = time - self.salting_events["drift_time"]
+        self.salting_events["s2_center_time"] = time
 
         s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
         s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
