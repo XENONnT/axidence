@@ -26,12 +26,7 @@ class SaltingPeaks(PeakBasics):
     )
 
     def refer_dtype(self):
-        # merged_dtype is needed because the refer_dtype should return a list
-        return strax.merged_dtype(
-            [
-                strax.to_numpy_dtype(super(SaltingPeaks, self).infer_dtype()),
-            ]
-        )
+        return strax.unpack_dtype(strax.to_numpy_dtype(super(SaltingPeaks, self).infer_dtype()))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()

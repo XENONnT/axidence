@@ -14,7 +14,7 @@ class SaltingPeakProximity(PeakProximity):
     save_when = strax.SaveWhen.EXPLICIT
 
     def refer_dtype(self):
-        return strax.merged_dtype([strax.to_numpy_dtype(super(SaltingPeakProximity, self).dtype)])
+        return strax.unpack_dtype(strax.to_numpy_dtype(super(SaltingPeakProximity, self).dtype))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
