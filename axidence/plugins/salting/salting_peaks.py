@@ -3,7 +3,7 @@ import strax
 import straxen
 from straxen import PeakBasics
 
-from axidence.utils import copy_dtype
+from ...utils import copy_dtype
 
 
 class SaltingPeaks(PeakBasics):

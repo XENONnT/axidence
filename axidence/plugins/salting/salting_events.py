@@ -7,7 +7,7 @@ import straxen
 from straxen import units, EventBasics, EventPositions
 from straxen.misc import kind_colors
 
-from axidence.utils import copy_dtype
+from ...utils import copy_dtype
 
 
 kind_colors.update(
