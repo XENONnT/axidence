@@ -21,12 +21,6 @@ dependencies = [
   "straxen",
 ]
 
-[project.optional-dependencies]
-tests = [
-    "strax @ git+https://github.com/AxFoundation/strax.git",
-    "straxen @ git+https://github.com/XENONnT/straxen.git",
-]
-
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: BSD License",
@@ -35,6 +29,12 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.optional-dependencies]
+tests = [
+    "strax @ git+https://github.com/AxFoundation/strax.git",
+    "straxen @ git+https://github.com/XENONnT/straxen.git",
 ]
 
 [project.urls]
