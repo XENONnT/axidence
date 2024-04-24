@@ -1,30 +1,49 @@
+from typing import Tuple
 import strax
-from strax import Plugin
+from straxen import EventShadow, EventAmbience, EventSEDensity
+
+from ...utils import merge_salting_real
 
 
-class SaltedEventShadow(Plugin):
+class SaltedEventShadow(EventShadow):
     __version__ = "0.0.0"
-    depends_on = ("event_basics", "salting_peaks", "peak_shadow")
+    depends_on = (
+        "event_basics",
+        "salting_peaks",
+        "salting_peak_shadow",
+        "peak_basics",
+        "peak_shadow",
+    )
     provides = "event_shadow"
     data_kind = "events"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def compute(self, events, salting_peaks, peaks):
+        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
+        return super().compute(events, _peaks)
 
 
-class SaltedEventAmbience(Plugin):
+class SaltedEventAmbience(EventAmbience):
     __version__ = "0.0.0"
-    depends_on = ("event_basics", "salting_peaks", "peak_ambience")
+    depends_on = (
+        "event_basics",
+        "salting_peaks",
+        "salting_peak_ambience",
+        "peak_basics",
+        "peak_ambience",
+    )
     provides = "event_ambience"
     data_kind = "events"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def compute(self, events, salting_peaks, peaks):
+        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
+        return super().compute(events, _peaks)
 
 
-class SaltedEventSEDensity(Plugin):
+class SaltedEventSEDensity(EventSEDensity):
     __version__ = "0.0.0"
-    depends_on = (
+    depends_on: Tuple[str, ...] = (
         "event_basics",
         "salting_peaks",
         "salting_peak_se_density",
@@ -35,4 +54,6 @@ class SaltedEventSEDensity(Plugin):
     data_kind = "events"
     save_when = strax.SaveWhen.EXPLICIT
 
-    dtype = strax.time_fields
+    def compute(self, events, salting_peaks, peaks):
+        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
+        return super().compute(events, _peaks)

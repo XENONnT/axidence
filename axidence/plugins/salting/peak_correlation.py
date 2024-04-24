@@ -3,7 +3,7 @@ import numpy as np
 import strax
 from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakSEDensity
 
-from axidence.utils import copy_dtype
+from ...utils import copy_dtype
 
 
 class SaltingPeakProximity(PeakProximity):
@@ -61,7 +61,7 @@ class SaltingPeakProximity(PeakProximity):
 class SaltingPeakShadow(PeakShadow):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "peak_basics", "peak_positions")
-    provides = "peak_shadow"
+    provides = "salting_peak_shadow"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
 
@@ -81,7 +81,7 @@ class SaltingPeakShadow(PeakShadow):
 class SaltingPeakAmbience(PeakAmbience):
     __version__ = "0.0.0"
     depends_on = ("salting_peaks", "lone_hits", "peak_basics", "peak_positions")
-    provides = "peak_ambience"
+    provides = "salting_peak_ambience"
     data_kind = "salting_peaks"
     save_when = strax.SaveWhen.EXPLICIT
 

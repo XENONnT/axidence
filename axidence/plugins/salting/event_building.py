@@ -1,10 +1,11 @@
+from typing import Tuple
 import numpy as np
 from tqdm import tqdm
 import strax
 import straxen
 from straxen import Events, EventBasics
 
-from axidence.utils import needed_dtype
+from ...utils import needed_dtype, merge_salting_real
 from axidence.plugin import ExhaustPlugin
 
 
@@ -60,18 +61,15 @@ class SaltedEvents(Events, ExhaustPlugin):
                 f"{self.__class__.__name__} is a ExhaustPlugin plugin!"
             )
 
-        n_events = len(salting_peaks) // 2
-        if np.unique(salting_peaks["salt_number"]).size != n_events:
-            raise ValueError("Expected salt_number to be half of the input peaks number!")
+        _peaks = merge_salting_real(salting_peaks, peaks, self._peaks_dtype)
 
-        # combine salting_peaks and peaks
-        _peaks = np.empty(len(salting_peaks) + len(peaks), dtype=self._peaks_dtype)
-        for n in set(self.needed_fields):
-            _peaks[n] = np.hstack([salting_peaks[n], peaks[n]])
-        _peaks = np.sort(_peaks, order="time")
         # use S2s as anchors
         anchor_peaks = salting_peaks[1::2]
         windows = strax.touching_windows(_peaks, anchor_peaks, window=self.window)
+
+        n_events = len(salting_peaks) // 2
+        if np.unique(salting_peaks["salt_number"]).size != n_events:
+            raise ValueError("Expected salt_number to be half of the input peaks number!")
 
         _is_triggering = self._is_triggering(anchor_peaks)
 
@@ -118,7 +116,7 @@ class SaltedEvents(Events, ExhaustPlugin):
 
 class SaltedEventBasics(EventBasics, ExhaustPlugin):
     __version__ = "0.0.0"
-    depends_on = (
+    depends_on: Tuple[str, ...] = (
         "events",
         "salting_peaks",
         "salting_peak_proximity",
@@ -153,16 +151,6 @@ class SaltedEventBasics(EventBasics, ExhaustPlugin):
             list(self.peak_properties) + [("salt_number", np.int64, "Salting number of peaks")]
         )
 
-    def pick_fields(self, field, peaks):
-        if field in peaks.dtype.names:
-            _field = peaks[field]
-        else:
-            if np.issubdtype(np.dtype(self._peaks_dtype)[field], np.integer):
-                _field = np.full(len(peaks), -1)
-            else:
-                _field = np.full(len(peaks), np.nan)
-        return _field
-
     def compute(self, events, salting_peaks, peaks):
         if salting_peaks["salt_number"][0] != 0:
             raise ValueError(
@@ -170,11 +158,7 @@ class SaltedEventBasics(EventBasics, ExhaustPlugin):
                 f"{self.__class__.__name__} is a ExhaustPlugin plugin!"
             )
 
-        # combine salting_peaks and peaks
-        _peaks = np.empty(len(salting_peaks) + len(peaks), dtype=self._peaks_dtype)
-        for n in set(self.needed_fields):
-            _peaks[n] = np.hstack([self.pick_fields(n, salting_peaks), self.pick_fields(n, peaks)])
-        _peaks = np.sort(_peaks, order="time")
+        _peaks = merge_salting_real(salting_peaks, peaks, self._peaks_dtype)
 
         result = np.zeros(len(events), dtype=self.dtype)
         self.set_nan_defaults(result)
