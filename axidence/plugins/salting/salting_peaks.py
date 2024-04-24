@@ -47,6 +47,7 @@ class SaltingPeaks(PeakBasics):
         return dtype
 
     def compute(self, salting_events):
+        """Copy features of salting_events into salting_peaks."""
         salting_peaks = np.empty(len(salting_events) * 2, dtype=self.dtype)
         for n in "time endtime".split():
             salting_peaks[n] = np.repeat(salting_events[n], 2)
