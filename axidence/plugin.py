@@ -1,11 +1,12 @@
 import strax
+from strax import Plugin
 
 
 export, __all__ = strax.exporter()
 
 
 @export
-class ExhaustPlugin(strax.Plugin):
+class ExhaustPlugin(Plugin):
     """Plugin that exhausts all chunks when fetching data."""
 
     def _fetch_chunk(self, d, iters, check_end_not_before=None):
