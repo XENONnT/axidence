@@ -10,7 +10,6 @@ New Contributors
 
 v0.1.0 / 2024-04-24
 -------------------
-* Update `LICENSE` by @dachengx in https://github.com/dachengx/axidence/pull/5
 * Add package structure by @dachengx in https://github.com/dachengx/axidence/pull/6
 * Add `ExhaustPlugin` to read chunks together at once by @dachengx in https://github.com/dachengx/axidence/pull/7
 * Add Plugins to simulate Shadow, Ambience and SEDensity related features by @dachengx in https://github.com/dachengx/axidence/pull/8
