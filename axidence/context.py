@@ -15,6 +15,7 @@ from axidence import (
     SaltedEventAmbience,
     SaltedEventSEDensity,
 )
+from axidence import EventBuilding
 
 
 def unsalted_context(**kwargs):
@@ -36,5 +37,6 @@ def salt_to_context(self):
             SaltedEventShadow,
             SaltedEventAmbience,
             SaltedEventSEDensity,
+            EventBuilding,
         )
     )
