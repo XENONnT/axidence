@@ -1,6 +1,5 @@
 from typing import Tuple
 import numpy as np
-from tqdm import tqdm
 import strax
 import straxen
 from straxen import Events, EventBasics
@@ -10,7 +9,7 @@ from axidence.plugin import ExhaustPlugin
 
 
 class SaltedEvents(Events, ExhaustPlugin):
-    __version__ = "0.0.0"
+    __version__ = "0.1.0"
     depends_on = ("salting_peaks", "salting_peak_proximity", "peak_basics", "peak_proximity")
     provides = "events"
     data_kind = "events"
@@ -21,13 +20,6 @@ class SaltedEvents(Events, ExhaustPlugin):
         type=int,
         track=True,
         help="How many max drift time will the event builder extend",
-    )
-
-    disable_tqdm = straxen.URLConfig(
-        default=True,
-        type=bool,
-        track=False,
-        help="Whether to disable tqdm",
     )
 
     def __init__(self):
@@ -51,6 +43,10 @@ class SaltedEvents(Events, ExhaustPlugin):
                 f"while the gap_threshold is about {self.left_extension + self.right_extension}!"
             )
 
+        # for now, only S2 can trigger
+        if not self.exclude_s1_as_triggering_peaks:
+            raise NotImplementedError("Only S2 can trigger for now!")
+
     def get_window_size(self):
         return max(super().get_window_size(), self.window * 10)
 
@@ -65,47 +61,47 @@ class SaltedEvents(Events, ExhaustPlugin):
 
         # use S2s as anchors
         anchor_peaks = salting_peaks[1::2]
-        windows = strax.touching_windows(_peaks, anchor_peaks, window=self.window)
-
-        n_events = len(salting_peaks) // 2
-        if np.unique(salting_peaks["salt_number"]).size != n_events:
-            raise ValueError("Expected salt_number to be half of the input peaks number!")
-
-        _is_triggering = self._is_triggering(anchor_peaks)
-
-        # check if the salting event can trigger
-        # for now, only S2 can trigger
-        if not self.exclude_s1_as_triggering_peaks:
-            raise NotImplementedError("Only S2 can trigger for now!")
-        result = np.empty(n_events, self.dtype)
         if np.unique(anchor_peaks["type"]).size != 1:
             raise ValueError("Expected only one type of anchor peaks!")
 
+        # initial the final result
+        n_events = len(salting_peaks) // 2
+        if np.unique(salting_peaks["salt_number"]).size != n_events:
+            raise ValueError("Expected salt_number to be half of the input peaks number!")
+        result = np.empty(n_events, self.dtype)
+
+        # check if the salting anchor can trigger
+        is_triggering = self._is_triggering(anchor_peaks)
+
         # prepare for an empty event
-        empty_event = np.empty(1, dtype=self.dtype)
-        EventBasics.set_nan_defaults(empty_event)
+        empty_events = np.empty(len(anchor_peaks), dtype=self.dtype)
+        empty_events["time"] = anchor_peaks["time"]
+        empty_events["endtime"] = anchor_peaks["endtime"]
 
-        # iterate through all anchor peaks
-        _result = []
-        for i in tqdm(range(n_events), disable=self.disable_tqdm):
-            left_i, right_i = windows[i]
-            _events = super().compute(_peaks[left_i:right_i], start, end)
-            _events = strax.split_touching_windows(_events, anchor_peaks[i : i + 1])
-            if _is_triggering[i]:
-                if len(_events) != 1 or len(_events[0]) != 1:
-                    raise ValueError(f"Expected 1 event, got {_events}!")
-                _result.append(_events[0])
-            else:
-                empty_event["time"] = anchor_peaks["time"][i]
-                empty_event["endtime"] = anchor_peaks["endtime"][i]
-                _result.append(empty_event.copy())
-        _result = np.hstack(_result)
+        # build events at once because if a messy environment
+        # make the two anchor in the same event
+        # it will be considered as event building failure later
+        events = super().compute(_peaks, start, end)
+        events = strax.split_touching_windows(events, anchor_peaks)
 
+        # there should be only one event near the anchor
+        l_events = np.array([len(event) for event in events])
+        if not np.all(l_events <= 1):
+            raise ValueError(f"Expected one event per anchor, got {l_events.max()}!")
+
+        # merge events and placeholders
+        _result = np.hstack(
+            [events[i] if l_events[i] != 0 else empty_events[i] for i in range(n_events)]
+        )
+        # this more fancy way will not be used
+        # _result = np.sort(np.hstack(events + [empty_events[l_events == 0]]), order="time")
+        if not np.all(np.diff(_result["time"]) >= 0):
+            raise ValueError("Expected the result to be sorted!")
         for n in _result.dtype.names:
             result[n] = _result[n]
 
         # assign the most important parameters
-        result["is_triggering"] = _is_triggering
+        result["is_triggering"] = is_triggering
         result["salt_number"] = salting_peaks["salt_number"][::2]
         result["event_number"] = salting_peaks["salt_number"][::2]
 
