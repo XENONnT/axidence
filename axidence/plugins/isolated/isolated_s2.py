@@ -27,13 +27,16 @@ class IsolatedS2(Plugin):
     provides = "isolated_s2"
     data_kind = "isolated_s2"
 
-    isolated_s2_fields = straxen.URLConfig(
-        default={
-            "peaks": np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
-            "events": [],
-        },
-        type=dict,
-        help="Needed fields in isolated S2",
+    isolated_peaks_fields = straxen.URLConfig(
+        default=np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
+        type=(list, tuple),
+        help="Needed fields in isolated peaks",
+    )
+
+    isolated_events_fields = straxen.URLConfig(
+        default=[],
+        type=(list, tuple),
+        help="Needed fields in isolated events",
     )
 
     groups_seen = 0
@@ -45,8 +48,11 @@ class IsolatedS2(Plugin):
         return strax.unpack_dtype(union_dtype)
 
     def infer_dtype(self):
-        dtype = copy_dtype(self.refer_dtype("peaks"), self.isolated_s2_fields["peaks"])
-        dtype += copy_dtype(self.refer_dtype("events"), self.isolated_s2_fields["events"])
+        # Note that here we only save the time and endtime of peaks, but not events
+        if "time" in self.isolated_events_fields or "endtime" in self.isolated_events_fields:
+            raise ValueError("time and endtime fields are not allowed in isolated_events_fields!")
+        dtype = copy_dtype(self.refer_dtype("peaks"), self.isolated_peaks_fields)
+        dtype += copy_dtype(self.refer_dtype("events"), self.isolated_events_fields)
         dtype += [
             (("Group number of peaks", "group_number"), np.int64),
         ]
@@ -62,9 +68,9 @@ class IsolatedS2(Plugin):
         result = np.empty(_events["n_peaks"].sum(), dtype=self.dtype)
         for n in result.dtype.names:
             if n not in ["group_number"]:
-                if n in self.isolated_s2_fields["peaks"]:
+                if n in self.isolated_peaks_fields:
                     result[n] = _peaks[n]
-                elif n in self.isolated_s2_fields["events"]:
+                elif n in self.isolated_events_fields:
                     result[n] = np.repeat(_events[n], _events["n_peaks"])
                 else:
                     raise ValueError(f"Field {n} not found in peaks or events!")
