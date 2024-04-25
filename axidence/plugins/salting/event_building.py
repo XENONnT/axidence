@@ -18,7 +18,6 @@ class SaltedEvents(Events, ExhaustPlugin):
     n_drift_time_window = straxen.URLConfig(
         default=5,
         type=int,
-        track=True,
         help="How many max drift time will the event builder extend",
     )
 
@@ -32,7 +31,7 @@ class SaltedEvents(Events, ExhaustPlugin):
     def setup(self):
         super().setup()
         self.needed_fields, self._peaks_dtype = needed_dtype(
-            self.deps, self.dependencies_by_kind, set.intersection
+            self.deps, self.dependencies_by_kind().values(), set.intersection
         )
 
         self.window = self.n_drift_time_window * self.drift_time_max
@@ -140,7 +139,7 @@ class SaltedEventBasics(EventBasics, ExhaustPlugin):
         super().setup()
 
         self.needed_fields, self._peaks_dtype = needed_dtype(
-            self.deps, self.dependencies_by_kind, set.union
+            self.deps, self.dependencies_by_kind().values(), set.union
         )
 
         self.peak_properties = tuple(

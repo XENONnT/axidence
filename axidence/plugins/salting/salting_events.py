@@ -82,28 +82,24 @@ class SaltingEvents(EventPositions, EventBasics):
     veto_length_run_start = straxen.URLConfig(
         default=10**9,
         type=int,
-        track=True,
         help="Min time delay in [ns] for events towards the run start boundary",
     )
 
     veto_length_run_end = straxen.URLConfig(
         default=10**8,
         type=int,
-        track=True,
         help="Min time delay in [ns] for events towards the run end boundary",
     )
 
     s1_n_hits_tight_coincidence = straxen.URLConfig(
         default=2,
         type=int,
-        track=True,
         help="Will assign the events's ``s1_n_hits`` and ``s1_tight_coincidence`` by this",
     )
 
     n_drift_time_window = straxen.URLConfig(
         default=5,
         type=int,
-        track=True,
         help="How many max drift time will the event builder extend",
     )
 

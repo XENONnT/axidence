@@ -29,14 +29,14 @@ def needed_dtype(deps, dependencies_by_kind, func):
     needed_fields = func(
         *tuple(
             set.union(*tuple(set(deps[d].dtype_for(d).names) for d in dk))
-            for dk in dependencies_by_kind().values()
+            for dk in dependencies_by_kind
         )
     )
     dtype_reference = list(
         func(
             *tuple(
                 set.union(*tuple(set(deps[d].dtype_for(d).descr) for d in dk))
-                for dk in dependencies_by_kind().values()
+                for dk in dependencies_by_kind
             )
         )
     )
