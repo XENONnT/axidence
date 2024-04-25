@@ -1,5 +1,10 @@
+import warnings
+import pytz
+import utilix
 import strax
 from strax import Plugin
+import straxen
+from straxen import units
 
 
 export, __all__ = strax.exporter()
@@ -21,3 +26,48 @@ class ExhaustPlugin(Plugin):
                 "It should read all chunks together can process them together."
             )
         return super().do_compute(chunk_i=chunk_i, **kwargs)
+
+
+@export
+class RunMetaPlugin(Plugin):
+    """Plugin that provides run metadata."""
+
+    real_run_start = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    real_run_end = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    strict_real_run_time_check = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether to strictly check the real run time is provided",
+    )
+
+    def init_run_meta(self):
+        """Get the start and end of the run."""
+        if self.real_run_start is None or self.real_run_end is None:
+            if self.strict_real_run_time_check:
+                raise ValueError("Real run start and end times are not provided!")
+            else:
+                warnings.warn(
+                    "Real run start and end times are not provided. Using utilix to get them."
+                )
+            if straxen.utilix_is_configured():
+                coll = utilix.xent_collection()
+            else:
+                raise ValueError("Utilix is not configured cannot determine run mode.")
+            _doc = coll.find_one(
+                {"number": int(self.run_id)}, projection={"start": True, "end": True}
+            )
+            self.run_start = int(_doc["start"].replace(tzinfo=pytz.utc).timestamp() * units.s)
+            self.run_end = int(_doc["end"].replace(tzinfo=pytz.utc).timestamp() * units.s)
+        else:
+            self.run_start = self.real_run_start
+            self.run_end = self.real_run_end

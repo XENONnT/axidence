@@ -27,7 +27,7 @@ repos:
     rev: v1.9.0
     hooks:
     -   id: mypy
-        additional_dependencies: [types-PyYAML, types-tqdm]
+        additional_dependencies: [types-PyYAML, types-tqdm, types-pytz]
 
 -   repo: https://github.com/pycqa/doc8
     rev: v1.1.1
