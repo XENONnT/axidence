@@ -28,21 +28,25 @@ class IsolatedS2(Plugin):
     data_kind = "isolated_s2"
 
     isolated_s2_fields = straxen.URLConfig(
-        default=np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
-        type=(list, tuple),
-        track=True,
+        default={
+            "peaks": np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
+            "events": [],
+        },
+        type=dict,
         help="Needed fields in isolated S2",
     )
 
     groups_seen = 0
 
-    def refer_dtype(self):
-        provided_fields, union_dtype = needed_dtype(self.deps, self.dependencies_by_kind, set.union)
+    def refer_dtype(self, data_kind):
+        provided_fields, union_dtype = needed_dtype(
+            self.deps, [self.dependencies_by_kind()[data_kind]], set.union
+        )
         return strax.unpack_dtype(union_dtype)
 
     def infer_dtype(self):
-        dtype_reference = self.refer_dtype()
-        dtype = copy_dtype(dtype_reference, self.isolated_s2_fields)
+        dtype = copy_dtype(self.refer_dtype("peaks"), self.isolated_s2_fields["peaks"])
+        dtype += copy_dtype(self.refer_dtype("events"), self.isolated_s2_fields["events"])
         dtype += [
             (("Group number of peaks", "group_number"), np.int64),
         ]
@@ -55,16 +59,15 @@ class IsolatedS2(Plugin):
         if _events["n_peaks"].sum() != len(_peaks):
             raise ValueError(f"Expected {_events['n_peaks'].sum()} peaks, got {len(_peaks)}!")
 
-        all_names = set(peaks.dtype.names) | set(events.dtype.names)
         result = np.empty(_events["n_peaks"].sum(), dtype=self.dtype)
         for n in result.dtype.names:
             if n not in ["group_number"]:
-                if n not in all_names:
-                    raise ValueError(f"Field {n} not found in peaks or events!")
-                if n in peaks.dtype.names:
+                if n in self.isolated_s2_fields["peaks"]:
                     result[n] = _peaks[n]
-                if n in events.dtype.names:
+                elif n in self.isolated_s2_fields["events"]:
                     result[n] = np.repeat(_events[n], _events["n_peaks"])
+                else:
+                    raise ValueError(f"Field {n} not found in peaks or events!")
 
         result["group_number"] = (
             np.repeat(np.arange(len(_events)), _events["n_peaks"]) + self.groups_seen

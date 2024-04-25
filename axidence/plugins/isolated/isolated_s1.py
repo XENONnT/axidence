@@ -23,21 +23,22 @@ class IsolatedS1(Plugin):
     data_kind = "isolated_s1"
 
     isolated_s1_fields = straxen.URLConfig(
-        default=np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
-        type=(list, tuple),
-        track=True,
+        default={"peaks": np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names},
+        type=dict,
         help="Needed fields in isolated S1",
     )
 
     groups_seen = 0
 
-    def refer_dtype(self):
-        provided_fields, union_dtype = needed_dtype(self.deps, self.dependencies_by_kind, set.union)
+    def refer_dtype(self, data_kind):
+        provided_fields, union_dtype = needed_dtype(
+            self.deps, [self.dependencies_by_kind()[data_kind]], set.union
+        )
         return strax.unpack_dtype(union_dtype)
 
     def infer_dtype(self):
-        dtype_reference = self.refer_dtype()
-        dtype = copy_dtype(dtype_reference, self.isolated_s1_fields)
+        dtype_reference = self.refer_dtype("peaks")
+        dtype = copy_dtype(dtype_reference, self.isolated_s1_fields["peaks"])
         dtype += [
             (("Group number of peaks", "group_number"), np.int64),
         ]
