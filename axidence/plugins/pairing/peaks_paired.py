@@ -9,10 +9,10 @@ from ...dtypes import positioned_peak_dtype
 from ...plugin import ExhaustPlugin, RunMetaPlugin
 
 
-class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
+class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
     __version__ = "0.0.0"
-    depends_on = ("isolated_s1", "isolated_s2")
-    provides = ("paired_peaks", "paired_truth")
+    depends_on = ("isolated_s1", "isolated_s2", "cut_event_building_salted", "event_shadow_salted")
+    provides = ("peaks_paired", "truth_paired")
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
 
@@ -32,6 +32,24 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
         default=[],
         type=(list, tuple),
         help="Needed fields in isolated events",
+    )
+
+    real_run_start = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    real_run_end = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    strict_real_run_time_check = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether to strictly check the real run time is provided",
     )
 
     min_drift_length = straxen.URLConfig(
@@ -122,7 +140,7 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
             (("Original isolated S1 group", "s1_group_number"), np.int32),
             (("Original isolated S2 group", "s2_group_number"), np.int32),
         ] + strax.time_fields
-        return dict(paired_peaks=peaks_dtype, paired_truth=truth_dtype)
+        return dict(peaks_paired=peaks_dtype, truth_paired=truth_dtype)
 
     def setup(self, prepare=True):
         self.init_run_meta()
@@ -188,7 +206,7 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
         # divide results into chunks
         # max peaks number in left_i chunk
         max_in_chunk = round(
-            self.chunk_target_size_mb * 1e6 / self.dtype["paired_peaks"].itemsize * 0.9
+            self.chunk_target_size_mb * 1e6 / self.dtype["peaks_paired"].itemsize * 0.9
         )
         _n_peaks = n_peaks.copy()
         if _n_peaks.max() > max_in_chunk:
@@ -223,15 +241,15 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
         )
         s2_center_time = s1_center_time + drift_time
         # total number of isolated S1 & S2 peaks
-        peaks_arrays = np.zeros(n_peaks.sum(), dtype=self.dtype["paired_peaks"])
+        peaks_arrays = np.zeros(n_peaks.sum(), dtype=self.dtype["peaks_paired"])
 
         # assign features of sampled isolated S1 and S2 in AC events
         peaks_count = 0
         for i in range(len(n_peaks)):
-            _array = np.zeros(n_peaks[i], dtype=self.dtype["paired_peaks"])
+            _array = np.zeros(n_peaks[i], dtype=self.dtype["peaks_paired"])
             # isolated S1 is assigned peak by peak
             s1_index = s1_group_number[i]
-            for q in self.dtype["paired_peaks"].names:
+            for q in self.dtype["peaks_paired"].names:
                 if "origin" not in q and q not in ["event_number"]:
                     _array[0][q] = s1[s1_index][q]
             # _array[0]["origin_run_id"] = s1["run_id"][s1_index]
@@ -249,7 +267,7 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
             # isolated S2 is assigned group by group
             group_number = s2_group_number[i]
             s2_group_i = s2[s2_group_index[group_number] : s2_group_index[group_number + 1]]
-            for q in self.dtype["paired_peaks"].names:
+            for q in self.dtype["peaks_paired"].names:
                 if "origin" not in q and q not in ["event_number"]:
                     _array[1:][q] = s2_group_i[q]
             s2_index = s2_group_i["s2_index"]
@@ -279,7 +297,7 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
             peaks_count += len(_array)
 
         # assign truth
-        truth_arrays = np.zeros(len(n_peaks), dtype=self.dtype["paired_truth"])
+        truth_arrays = np.zeros(len(n_peaks), dtype=self.dtype["truth_paired"])
         truth_arrays["time"] = peaks_arrays["time"][
             np.unique(peaks_arrays["event_number"], return_index=True)[1]
         ]
@@ -317,7 +335,7 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2):
+    def compute(self, isolated_s1, isolated_s2, events_salted):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -391,13 +409,13 @@ class PairedPeaks(ExhaustPlugin, RunMetaPlugin):
             self.run_start + right_i * self.paring_event_interval - self.paring_event_interval // 2
         )
         result = dict()
-        result["paired_peaks"] = self.chunk(
-            start=start, end=end, data=peaks_arrays, data_type="paired_peaks"
+        result["peaks_paired"] = self.chunk(
+            start=start, end=end, data=peaks_arrays, data_type="peaks_paired"
         )
-        result["paired_truth"] = self.chunk(
-            start=start, end=end, data=truth_arrays, data_type="paired_truth"
+        result["truth_paired"] = self.chunk(
+            start=start, end=end, data=truth_arrays, data_type="truth_paired"
         )
         # chunk size should be less than default chunk size in strax
-        assert result["paired_peaks"].nbytes < self.chunk_target_size_mb * 1e6
+        assert result["peaks_paired"].nbytes < self.chunk_target_size_mb * 1e6
 
         return result

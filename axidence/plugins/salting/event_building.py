@@ -4,15 +4,15 @@ import strax
 import straxen
 from straxen import Events, EventBasics
 
-from ...utils import needed_dtype, merge_salting_real
+from ...utils import needed_dtype, merge_salted_real
 from ...plugin import ExhaustPlugin
 
 
-class SaltedEvents(Events, ExhaustPlugin):
+class EventsSalted(Events, ExhaustPlugin):
     __version__ = "0.1.0"
-    depends_on = ("salting_peaks", "salting_peak_proximity", "peak_basics", "peak_proximity")
-    provides = "events"
-    data_kind = "events"
+    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    provides = "events_salted"
+    data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     n_drift_time_window = straxen.URLConfig(
@@ -49,23 +49,23 @@ class SaltedEvents(Events, ExhaustPlugin):
     def get_window_size(self):
         return max(super().get_window_size(), self.window * 10)
 
-    def compute(self, salting_peaks, peaks, start, end):
-        if salting_peaks["salt_number"][0] != 0:
+    def compute(self, peaks_salted, peaks, start, end):
+        if peaks_salted["salt_number"][0] != 0:
             raise ValueError(
                 "Expected salt_number to start from 0 because "
                 f"{self.__class__.__name__} is a ExhaustPlugin plugin!"
             )
 
-        _peaks = merge_salting_real(salting_peaks, peaks, self._peaks_dtype)
+        _peaks = merge_salted_real(peaks_salted, peaks, self._peaks_dtype)
 
         # use S2s as anchors
-        anchor_peaks = salting_peaks[1::2]
+        anchor_peaks = peaks_salted[1::2]
         if np.unique(anchor_peaks["type"]).size != 1:
             raise ValueError("Expected only one type of anchor peaks!")
 
         # initial the final result
-        n_events = len(salting_peaks) // 2
-        if np.unique(salting_peaks["salt_number"]).size != n_events:
+        n_events = len(peaks_salted) // 2
+        if np.unique(peaks_salted["salt_number"]).size != n_events:
             raise ValueError("Expected salt_number to be half of the input peaks number!")
         result = np.empty(n_events, self.dtype)
 
@@ -101,26 +101,26 @@ class SaltedEvents(Events, ExhaustPlugin):
 
         # assign the most important parameters
         result["is_triggering"] = is_triggering
-        result["salt_number"] = salting_peaks["salt_number"][::2]
-        result["event_number"] = salting_peaks["salt_number"][::2]
+        result["salt_number"] = peaks_salted["salt_number"][::2]
+        result["event_number"] = peaks_salted["salt_number"][::2]
 
         if np.any(np.diff(result["time"]) < 0):
             raise ValueError("Expected time to be sorted!")
         return result
 
 
-class SaltedEventBasics(EventBasics, ExhaustPlugin):
+class EventBasicsSalted(EventBasics, ExhaustPlugin):
     __version__ = "0.0.0"
     depends_on: Tuple[str, ...] = (
-        "events",
-        "salting_peaks",
-        "salting_peak_proximity",
+        "events_salted",
+        "peaks_salted",
+        "peak_proximity_salted",
         "peak_basics",
         "peak_proximity",
         "peak_positions",
     )
-    provides = "event_basics"
-    data_kind = "events"
+    provides = "event_basics_salted"
+    data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     def infer_dtype(self):
@@ -146,28 +146,28 @@ class SaltedEventBasics(EventBasics, ExhaustPlugin):
             list(self.peak_properties) + [("salt_number", np.int64, "Salting number of peaks")]
         )
 
-    def compute(self, events, salting_peaks, peaks):
-        if salting_peaks["salt_number"][0] != 0:
+    def compute(self, events_salted, peaks_salted, peaks):
+        if peaks_salted["salt_number"][0] != 0:
             raise ValueError(
                 "Expected salt_number to start from 0 because "
                 f"{self.__class__.__name__} is a ExhaustPlugin plugin!"
             )
 
-        _peaks = merge_salting_real(salting_peaks, peaks, self._peaks_dtype)
+        _peaks = merge_salted_real(peaks_salted, peaks, self._peaks_dtype)
 
-        result = np.zeros(len(events), dtype=self.dtype)
+        result = np.zeros(len(events_salted), dtype=self.dtype)
         self.set_nan_defaults(result)
 
-        split_peaks = strax.split_by_containment(_peaks, events)
+        split_peaks = strax.split_by_containment(_peaks, events_salted)
 
-        result["time"] = events["time"]
-        result["endtime"] = events["endtime"]
-        result["salt_number"] = events["salt_number"]
-        result["event_number"] = events["event_number"]
+        result["time"] = events_salted["time"]
+        result["endtime"] = events_salted["endtime"]
+        result["salt_number"] = events_salted["salt_number"]
+        result["event_number"] = events_salted["event_number"]
 
-        self.fill_events(result, events, split_peaks)
-        result["is_triggering"] = events["is_triggering"]
+        self.fill_events(result, events_salted, split_peaks)
+        result["is_triggering"] = events_salted["is_triggering"]
 
         if np.all(result["s1_salt_number"] < 0) or np.all(result["s2_salt_number"] < 0):
-            raise ValueError("Found zero triggered salting peaks!")
+            raise ValueError("Found zero triggered salted peaks!")
         return result

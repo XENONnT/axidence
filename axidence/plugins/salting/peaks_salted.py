@@ -6,11 +6,11 @@ from straxen import PeakBasics
 from ...utils import copy_dtype
 
 
-class SaltingPeaks(PeakBasics):
+class PeaksSalted(PeakBasics):
     __version__ = "0.0.0"
-    depends_on = "salting_events"
-    provides = "salting_peaks"
-    data_kind = "salting_peaks"
+    depends_on = "events_salting"
+    provides = "peaks_salted"
+    data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     only_salt_s1 = straxen.URLConfig(
@@ -26,7 +26,7 @@ class SaltingPeaks(PeakBasics):
     )
 
     def refer_dtype(self):
-        return strax.unpack_dtype(strax.to_numpy_dtype(super(SaltingPeaks, self).infer_dtype()))
+        return strax.unpack_dtype(strax.to_numpy_dtype(super(PeaksSalted, self).infer_dtype()))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
@@ -41,38 +41,38 @@ class SaltingPeaks(PeakBasics):
         ]
         return dtype
 
-    def compute(self, salting_events):
-        """Copy features of salting_events into salting_peaks."""
-        salting_peaks = np.empty(len(salting_events) * 2, dtype=self.dtype)
+    def compute(self, events_salting):
+        """Copy features of events_salting into peaks_salted."""
+        peaks_salted = np.empty(len(events_salting) * 2, dtype=self.dtype)
         for n in "center_time area".split():
-            salting_peaks[n] = np.vstack(
+            peaks_salted[n] = np.vstack(
                 [
-                    salting_events[f"s1_{n}"],
-                    salting_events[f"s2_{n}"],
+                    events_salting[f"s1_{n}"],
+                    events_salting[f"s2_{n}"],
                 ]
             ).T.flatten()
-        salting_peaks["time"] = salting_peaks["center_time"]
+        peaks_salted["time"] = peaks_salted["center_time"]
         # add one to prevent error about non-positive length
-        salting_peaks["endtime"] = salting_peaks["time"] + 1
+        peaks_salted["endtime"] = peaks_salted["time"] + 1
         for n in "n_hits tight_coincidence".split():
-            salting_peaks[n] = np.vstack(
+            peaks_salted[n] = np.vstack(
                 [
-                    salting_events[f"s1_{n}"],
-                    np.full(len(salting_events), -1),
+                    events_salting[f"s1_{n}"],
+                    np.full(len(events_salting), -1),
                 ]
             ).T.flatten()
         for n in "x y".split():
-            salting_peaks[n] = np.vstack(
+            peaks_salted[n] = np.vstack(
                 [
-                    np.full(len(salting_events), np.nan),
-                    salting_events[f"s2_{n}"],
+                    np.full(len(events_salting), np.nan),
+                    events_salting[f"s2_{n}"],
                 ]
             ).T.flatten()
-        salting_peaks["type"] = np.vstack(
+        peaks_salted["type"] = np.vstack(
             [
-                np.full(len(salting_events), 1),
-                np.full(len(salting_events), 2),
+                np.full(len(events_salting), 1),
+                np.full(len(events_salting), 2),
             ]
         ).T.flatten()
-        salting_peaks["salt_number"] = np.repeat(salting_events["salt_number"], 2)
-        return salting_peaks
+        peaks_salted["salt_number"] = np.repeat(events_salting["salt_number"], 2)
+        return peaks_salted

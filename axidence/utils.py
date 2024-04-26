@@ -59,12 +59,12 @@ def _pick_fields(field, peaks, peaks_dtype):
     return _field
 
 
-def merge_salting_real(salting_peaks, real_peaks, peaks_dtype):
-    # combine salting_peaks and peaks
-    _peaks = np.empty(len(salting_peaks) + len(real_peaks), dtype=peaks_dtype)
+def merge_salted_real(peaks_salted, real_peaks, peaks_dtype):
+    # combine peaks_salted and peaks
+    _peaks = np.empty(len(peaks_salted) + len(real_peaks), dtype=peaks_dtype)
     for n in _peaks.dtype.names:
         _peaks[n] = np.hstack(
-            [_pick_fields(n, salting_peaks, peaks_dtype), _pick_fields(n, real_peaks, peaks_dtype)]
+            [_pick_fields(n, peaks_salted, peaks_dtype), _pick_fields(n, real_peaks, peaks_dtype)]
         )
     _peaks = np.sort(_peaks, order="time")
     return _peaks

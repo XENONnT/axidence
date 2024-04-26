@@ -3,49 +3,39 @@ from tqdm import tqdm
 import strax
 import straxen
 
-from axidence import SaltingEvents, SaltingPeaks
+from axidence import EventsSalting, PeaksSalted
 from axidence import (
-    SaltingPeakProximity,
-    SaltingPeakShadow,
-    SaltingPeakAmbience,
-    SaltingPeakSEDensity,
+    PeakProximitySalted,
+    PeakShadowSalted,
+    PeakAmbienceSalted,
+    PeakSEDensitySalted,
 )
 from axidence import (
-    SaltedEvents,
-    SaltedEventBasics,
-    SaltedEventShadow,
-    SaltedEventAmbience,
-    SaltedEventSEDensity,
+    EventsSalted,
+    EventBasicsSalted,
+    EventShadowSalted,
+    EventAmbienceSalted,
+    EventSEDensitySalted,
+    EventBuilding,
 )
-from axidence import EventBuilding
+from axidence import (
+    IsolatedS1Mask,
+    IsolatedS2Mask,
+    IsolatedS1,
+    IsolatedS2,
+    PeaksPaired,
+)
 
 
-def unsalted_context(**kwargs):
+def ordinary_context(**kwargs):
+    """Return a straxen context without paring and salting."""
     return straxen.contexts.xenonnt_online(_database_init=False, **kwargs)
 
 
 @strax.Context.add_method
-def salt_to_context(self):
-    self.register(
-        (
-            SaltingEvents,
-            SaltingPeaks,
-            SaltingPeakProximity,
-            SaltingPeakShadow,
-            SaltingPeakAmbience,
-            SaltingPeakSEDensity,
-            SaltedEvents,
-            SaltedEventBasics,
-            SaltedEventShadow,
-            SaltedEventAmbience,
-            SaltedEventSEDensity,
-            EventBuilding,
-        )
-    )
-
-
-@strax.Context.add_method
 def plugin_factory(st, data_type, suffixes):
+    """Create new plugins inheriting from the plugin which provides
+    data_type."""
     plugin = st._plugin_class_registry[data_type]
 
     new_plugins = []
@@ -110,6 +100,11 @@ def plugin_factory(st, data_type, suffixes):
 
 @strax.Context.add_method
 def replication_tree(st, suffixes=["Paired", "Salted"], tqdm_disable=True):
+    """Replicate the dependency tree.
+
+    The plugins in the new tree will have the suffixed depends_on,
+    provides and data_kind as the plugins in original tree.
+    """
     snakes = ["_" + strax.camel_to_snake(suffix) for suffix in suffixes]
     for k in st._plugin_class_registry.keys():
         for s in snakes:
@@ -120,3 +115,54 @@ def replication_tree(st, suffixes=["Paired", "Salted"], tqdm_disable=True):
         plugins_collection += st.plugin_factory(k, suffixes)
 
     st.register(plugins_collection)
+
+
+@strax.Context.add_method
+def _salt_to_context(self):
+    """Register the salted plugins to the context."""
+    self.register(
+        (
+            EventsSalting,
+            PeaksSalted,
+            PeakProximitySalted,
+            PeakShadowSalted,
+            PeakAmbienceSalted,
+            PeakSEDensitySalted,
+            EventsSalted,
+            EventBasicsSalted,
+            EventShadowSalted,
+            EventAmbienceSalted,
+            EventSEDensitySalted,
+        )
+    )
+
+
+@strax.Context.add_method
+def _pair_to_context(self):
+    """Register the paired plugins to the context."""
+    self.register(
+        (
+            IsolatedS1Mask,
+            IsolatedS2Mask,
+            IsolatedS1,
+            IsolatedS2,
+            PeaksPaired,
+        )
+    )
+
+
+@strax.Context.add_method
+def salt_to_context(st, tqdm_disable=True):
+    """Register the salted plugins to the context."""
+    st.register((EventBuilding,))
+    st.replication_tree(suffixes=["Salted"], tqdm_disable=tqdm_disable)
+    st._salt_to_context()
+
+
+@strax.Context.add_method
+def salt_and_pair_to_context(st, tqdm_disable=True):
+    """Register the salted and paired plugins to the context."""
+    st.register((EventBuilding,))
+    st.replication_tree(tqdm_disable=tqdm_disable)
+    st._salt_to_context()
+    st._pair_to_context()

@@ -3,25 +3,16 @@ import numpy as np
 import strax
 import straxen
 from straxen import units, EventBasics, EventPositions
-from straxen.misc import kind_colors
 
 from ...utils import copy_dtype
 from ...plugin import RunMetaPlugin
 
 
-kind_colors.update(
-    {
-        "salting_events": "#0080ff",
-        "salting_peaks": "#00ffff",
-    }
-)
-
-
-class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
+class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
     __version__ = "0.0.0"
     depends_on: Tuple = tuple()
-    provides = "salting_events"
-    data_kind = "salting_events"
+    provides = "events_salting"
+    data_kind = "events_salting"
     save_when = strax.SaveWhen.EXPLICIT
 
     salting_seed = straxen.URLConfig(
@@ -34,6 +25,24 @@ class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
         default=10,
         type=(int, float),
         help="Rate of salting in Hz",
+    )
+
+    real_run_start = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    real_run_end = straxen.URLConfig(
+        default=None,
+        type=(int, None),
+        help="Real start time of run [ns]",
+    )
+
+    strict_real_run_time_check = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether to strictly check the real run time is provided",
     )
 
     s1_area_range = straxen.URLConfig(
@@ -92,7 +101,7 @@ class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
         return strax.merged_dtype(
             [
                 strax.to_numpy_dtype(super(EventPositions, self).infer_dtype()),
-                strax.to_numpy_dtype(super(SaltingEvents, self).infer_dtype()),
+                strax.to_numpy_dtype(super(EventsSalting, self).infer_dtype()),
             ]
         )
 
@@ -150,52 +159,52 @@ class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
     def setup(self):
         """Sample the features of events."""
         super(EventPositions, self).setup()
-        super(SaltingEvents, self).setup()
+        super(EventsSalting, self).setup()
 
         self.init_rng()
         self.init_run_meta()
 
         time = self.sample_time()
         self.n_events = len(time)
-        self.salting_events = np.empty(self.n_events, dtype=self.dtype)
-        self.salting_events["salt_number"] = np.arange(self.n_events)
-        self.salting_events["time"] = time
-        self.salting_events["endtime"] = time
+        self.events_salting = np.empty(self.n_events, dtype=self.dtype)
+        self.events_salting["salt_number"] = np.arange(self.n_events)
+        self.events_salting["time"] = time
+        self.events_salting["endtime"] = time
 
-        self.salting_events["s1_n_hits"] = self.s1_n_hits_tight_coincidence
-        self.salting_events["s1_tight_coincidence"] = self.s1_n_hits_tight_coincidence
+        self.events_salting["s1_n_hits"] = self.s1_n_hits_tight_coincidence
+        self.events_salting["s1_tight_coincidence"] = self.s1_n_hits_tight_coincidence
 
         theta = self.rng.random(size=self.n_events) * 2 * np.pi - np.pi
         r = np.sqrt(self.rng.random(size=self.n_events)) * straxen.tpc_r
-        self.salting_events["x"] = np.cos(theta) * r
-        self.salting_events["y"] = np.sin(theta) * r
-        self.salting_events["z"] = -self.rng.random(size=self.n_events) * straxen.tpc_z
+        self.events_salting["x"] = np.cos(theta) * r
+        self.events_salting["y"] = np.sin(theta) * r
+        self.events_salting["z"] = -self.rng.random(size=self.n_events) * straxen.tpc_z
         s2_x, s2_y, z_naive = self.inverse_field_distortion(
-            self.salting_events["x"],
-            self.salting_events["y"],
-            self.salting_events["z"],
+            self.events_salting["x"],
+            self.events_salting["y"],
+            self.events_salting["z"],
         )
-        self.salting_events["s2_x"] = s2_x
-        self.salting_events["s2_y"] = s2_y
-        self.salting_events["z_naive"] = z_naive
-        self.salting_events["drift_time"] = (
+        self.events_salting["s2_x"] = s2_x
+        self.events_salting["s2_y"] = s2_y
+        self.events_salting["z_naive"] = z_naive
+        self.events_salting["drift_time"] = (
             self.electron_drift_velocity * self.electron_drift_time_gate
-            - self.salting_events["z_naive"]
+            - self.events_salting["z_naive"]
         ) / self.electron_drift_velocity
 
-        self.salting_events["s1_center_time"] = time - self.salting_events["drift_time"]
-        self.salting_events["s2_center_time"] = time
+        self.events_salting["s1_center_time"] = time - self.events_salting["drift_time"]
+        self.events_salting["s2_center_time"] = time
 
         s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
         s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
-        self.salting_events["s1_area"] = np.exp(
+        self.events_salting["s1_area"] = np.exp(
             self.rng.uniform(np.log(s1_area_range[0]), np.log(s1_area_range[1]), size=self.n_events)
         )
-        self.salting_events["s1_area"] = np.clip(self.salting_events["s1_area"], *s1_area_range)
-        self.salting_events["s2_area"] = np.exp(
+        self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
+        self.events_salting["s2_area"] = np.exp(
             self.rng.uniform(np.log(s2_area_range[0]), np.log(s2_area_range[1]), size=self.n_events)
         )
-        self.salting_events["s2_area"] = np.clip(self.salting_events["s2_area"], *s2_area_range)
+        self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
 
         self.set_chunk_splitting()
 
@@ -206,13 +215,13 @@ class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
         if chunk_i == 0:
             start = self.run_start
         else:
-            start = self.salting_events["time"][indices[0]] - self.time_left
+            start = self.events_salting["time"][indices[0]] - self.time_left
 
         if chunk_i == len(self.slices) - 1:
             end = self.run_end
         else:
-            end = self.salting_events["time"][indices[1] - 1] + self.time_right
-        return self.chunk(start=start, end=end, data=self.salting_events[indices[0] : indices[1]])
+            end = self.events_salting["time"][indices[1] - 1] + self.time_right
+        return self.chunk(start=start, end=end, data=self.events_salting[indices[0] : indices[1]])
 
     def is_ready(self, chunk_i):
         if chunk_i < len(self.slices):

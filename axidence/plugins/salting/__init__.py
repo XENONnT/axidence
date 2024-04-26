@@ -1,8 +1,8 @@
-from . import salting_events
-from .salting_events import *
+from . import events_salting
+from .events_salting import *
 
-from . import salting_peaks
-from .salting_peaks import *
+from . import peaks_salted
+from .peaks_salted import *
 
 from . import peak_correlation
 from .peak_correlation import *

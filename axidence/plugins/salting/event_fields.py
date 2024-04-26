@@ -2,58 +2,58 @@ from typing import Tuple
 import strax
 from straxen import EventShadow, EventAmbience, EventSEDensity
 
-from ...utils import merge_salting_real
+from ...utils import merge_salted_real
 
 
-class SaltedEventShadow(EventShadow):
+class EventShadowSalted(EventShadow):
     __version__ = "0.0.0"
     depends_on = (
         "event_basics",
-        "salting_peaks",
-        "salting_peak_shadow",
+        "peaks_salted",
+        "peak_shadow_salted",
         "peak_basics",
         "peak_shadow",
     )
-    provides = "event_shadow"
-    data_kind = "events"
+    provides = "event_shadow_salted"
+    data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
-    def compute(self, events, salting_peaks, peaks):
-        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
-        return super().compute(events, _peaks)
+    def compute(self, events_salted, peaks_salted, peaks):
+        _peaks = merge_salted_real(peaks_salted, peaks, peaks.dtype)
+        return super().compute(events_salted, _peaks)
 
 
-class SaltedEventAmbience(EventAmbience):
+class EventAmbienceSalted(EventAmbience):
     __version__ = "0.0.0"
     depends_on = (
         "event_basics",
-        "salting_peaks",
-        "salting_peak_ambience",
+        "peaks_salted",
+        "peak_ambience_salted",
         "peak_basics",
         "peak_ambience",
     )
-    provides = "event_ambience"
-    data_kind = "events"
+    provides = "event_ambience_salted"
+    data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
-    def compute(self, events, salting_peaks, peaks):
-        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
-        return super().compute(events, _peaks)
+    def compute(self, events_salted, peaks_salted, peaks):
+        _peaks = merge_salted_real(peaks_salted, peaks, peaks.dtype)
+        return super().compute(events_salted, _peaks)
 
 
-class SaltedEventSEDensity(EventSEDensity):
+class EventSEDensitySalted(EventSEDensity):
     __version__ = "0.0.0"
     depends_on: Tuple[str, ...] = (
         "event_basics",
-        "salting_peaks",
-        "salting_peak_se_density",
+        "peaks_salted",
+        "peak_se_density_salted",
         "peak_basics",
         "peak_se_density",
     )
-    provides = "event_se_density"
-    data_kind = "events"
+    provides = "event_se_density_salted"
+    data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
-    def compute(self, events, salting_peaks, peaks):
-        _peaks = merge_salting_real(salting_peaks, peaks, peaks.dtype)
-        return super().compute(events, _peaks)
+    def compute(self, events_salted, peaks_salted, peaks):
+        _peaks = merge_salted_real(peaks_salted, peaks, peaks.dtype)
+        return super().compute(events_salted, _peaks)

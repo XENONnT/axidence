@@ -32,24 +32,6 @@ class ExhaustPlugin(Plugin):
 class RunMetaPlugin(Plugin):
     """Plugin that provides run metadata."""
 
-    real_run_start = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    real_run_end = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    strict_real_run_time_check = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether to strictly check the real run time is provided",
-    )
-
     def init_run_meta(self):
         """Get the start and end of the run."""
         if self.real_run_start is None or self.real_run_end is None:
