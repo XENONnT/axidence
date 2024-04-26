@@ -55,6 +55,7 @@ def plugin_factory(st, data_type, suffixes):
                 raise RuntimeError
 
             def do_compute(self, chunk_i=None, **kwargs):
+                # remove the suffix from the keys
                 new_keys = [k.replace(self.suffix, "") for k in kwargs.keys()]
                 new_kwargs = dict(zip(new_keys, kwargs.values()))
                 return super().do_compute(chunk_i=chunk_i, **new_kwargs)
