@@ -4,6 +4,7 @@ from strax import Plugin
 import straxen
 
 from ...utils import needed_dtype, copy_dtype
+from ...dtypes import positioned_peak_dtype
 
 
 class IsolatedS2(Plugin):
@@ -28,7 +29,7 @@ class IsolatedS2(Plugin):
     data_kind = "isolated_s2"
 
     isolated_peaks_fields = straxen.URLConfig(
-        default=np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
+        default=np.dtype(positioned_peak_dtype()).names,
         type=(list, tuple),
         help="Needed fields in isolated peaks",
     )
@@ -49,8 +50,9 @@ class IsolatedS2(Plugin):
 
     def infer_dtype(self):
         # Note that here we only save the time and endtime of peaks, but not events
-        if "time" in self.isolated_events_fields or "endtime" in self.isolated_events_fields:
-            raise ValueError("time and endtime fields are not allowed in isolated_events_fields!")
+        for n in ["time", "endtime", "x", "y"]:
+            if n in self.isolated_events_fields:
+                raise ValueError(f"{n} is not allowed in isolated_events_fields!")
         dtype = copy_dtype(self.refer_dtype("peaks"), self.isolated_peaks_fields)
         dtype += copy_dtype(self.refer_dtype("events"), self.isolated_events_fields)
         dtype += [

@@ -71,3 +71,4 @@ class RunMetaPlugin(Plugin):
         else:
             self.run_start = self.real_run_start
             self.run_end = self.real_run_end
+        self.run_time = (self.run_end - self.run_start) / units.s

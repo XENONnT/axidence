@@ -3,12 +3,22 @@ import strax
 import straxen
 
 
-def grouped_peak_dtype(n_channels=straxen.n_tpc_pmts):
-    dtype = strax.peak_dtype(n_channels=n_channels)
-    # since event_number is int64 in event_basics
-    dtype += [
-        (("Group number of peaks", "group_number"), np.int64),
-    ]
+def peak_positions_dtype():
+    st = strax.Context(
+        config=straxen.contexts.xnt_common_config, **straxen.contexts.xnt_common_opts
+    )
+    data_name = "peak_positions"
+    PeakPositionsNT0 = st._get_plugins((data_name,), "0")[data_name]
+    return strax.unpack_dtype(PeakPositionsNT0.dtype)
+
+
+def positioned_peak_dtype(n_channels=straxen.n_tpc_pmts):
+    dtype = strax.merged_dtype(
+        [
+            np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)),
+            np.dtype(peak_positions_dtype()),
+        ]
+    )
     return dtype
 
 
@@ -41,7 +51,20 @@ for direction in ["left", "right"]:
         f"{direction}_area",
     ]
 
-correlation_fields = shadow_fields + ambience_fields + se_density_fields + nearest_triggering_fields
+peak_misc_fields = [
+    "center_time",
+    "area_fraction_top",
+    "n_competing",
+    "n_competing_left",
+]
+
+correlation_fields = (
+    shadow_fields
+    + ambience_fields
+    + se_density_fields
+    + nearest_triggering_fields
+    + peak_misc_fields
+)
 
 event_level_fields = [
     "s1_center_time",

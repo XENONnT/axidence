@@ -4,6 +4,7 @@ from strax import Plugin
 import straxen
 
 from ...utils import needed_dtype, copy_dtype
+from ...dtypes import positioned_peak_dtype
 
 
 class IsolatedS1(Plugin):
@@ -23,7 +24,7 @@ class IsolatedS1(Plugin):
     data_kind = "isolated_s1"
 
     isolated_peaks_fields = straxen.URLConfig(
-        default=np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names,
+        default=np.dtype(positioned_peak_dtype()).names,
         type=(list, tuple),
         help="Needed fields in isolated peaks",
     )
