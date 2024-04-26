@@ -8,7 +8,7 @@ from ...utils import merge_salted_real
 class EventShadowSalted(EventShadow):
     __version__ = "0.0.0"
     depends_on = (
-        "event_basics",
+        "event_basics_salted",
         "peaks_salted",
         "peak_shadow_salted",
         "peak_basics",
@@ -26,7 +26,7 @@ class EventShadowSalted(EventShadow):
 class EventAmbienceSalted(EventAmbience):
     __version__ = "0.0.0"
     depends_on = (
-        "event_basics",
+        "event_basics_salted",
         "peaks_salted",
         "peak_ambience_salted",
         "peak_basics",
@@ -44,7 +44,7 @@ class EventAmbienceSalted(EventAmbience):
 class EventSEDensitySalted(EventSEDensity):
     __version__ = "0.0.0"
     depends_on: Tuple[str, ...] = (
-        "event_basics",
+        "event_basics_salted",
         "peaks_salted",
         "peak_se_density_salted",
         "peak_basics",
