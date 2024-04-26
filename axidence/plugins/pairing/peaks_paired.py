@@ -185,14 +185,9 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         print(f"S2 rate is {s2_rate * 1e3:.3f}mHz")
 
         paring_rate_full = (
-            s1_rate
-            * s2_rate
-            * (max_drift_time - min_drift_time)
-            / units.s
-            * run_time
-            / paring_rate_correction
+            s1_rate * s2_rate * (max_drift_time - min_drift_time) / units.s / paring_rate_correction
         )
-        n_events = round(paring_rate_full * paring_rate_bootstrap_factor)
+        n_events = round(paring_rate_full * run_time * paring_rate_bootstrap_factor)
         s1_group_number = rng.choice(len(s1), size=n_events, replace=True)
         s2_group_number = rng.choice(len(s2), size=n_events, replace=True)
         if fixed_drift_time is None:
