@@ -24,6 +24,7 @@ from axidence import (
     IsolatedS1,
     IsolatedS2,
     PeaksPaired,
+    PeakProximityPaired,
 )
 
 
@@ -153,6 +154,7 @@ def _pair_to_context(self):
             IsolatedS1,
             IsolatedS2,
             PeaksPaired,
+            PeakProximityPaired,
         )
     )
 
