@@ -39,7 +39,7 @@ def plugin_factory(st, data_type, suffixes):
     plugin = st._plugin_class_registry[data_type]
 
     new_plugins = []
-    p = st._get_plugins((data_type,), run_id="0")[data_type]
+    p = st._Context__get_plugin(run_id="0", data_type=data_type)
 
     for suffix in suffixes:
         snake = "_" + strax.camel_to_snake(suffix)
