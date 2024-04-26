@@ -2,6 +2,21 @@ import numpy as np
 import strax
 import straxen
 
+from straxen.misc import kind_colors
+
+
+kind_colors.update(
+    {
+        "events_salting": "#0080ff",
+        "peaks_salted": "#00c0ff",
+        "events_salted": "#00ffff",
+        "peaks_paired": "#ff00ff",
+        "events_paired": "#ffccff",
+        "isolated_s1": "#80ff00",
+        "isolated_s2": "#80ff00",
+    }
+)
+
 
 def peak_positions_dtype():
     st = strax.Context(

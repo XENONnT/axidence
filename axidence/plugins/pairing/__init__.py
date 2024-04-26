@@ -1,5 +1,5 @@
-from . import paired_peaks
-from .paired_peaks import *
+from . import peaks_paired
+from .peaks_paired import *
 
-from . import paired_events
-from .paired_events import *
+from . import events_paired
+from .events_paired import *

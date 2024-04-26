@@ -6,15 +6,15 @@ from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakSEDensity
 from ...utils import copy_dtype
 
 
-class SaltingPeakProximity(PeakProximity):
+class PeakProximitySalted(PeakProximity):
     __version__ = "0.0.0"
-    depends_on = ("salting_peaks", "peak_basics")
-    provides = "salting_peak_proximity"
-    data_kind = "salting_peaks"
+    depends_on = ("peaks_salted", "peak_basics")
+    provides = "peak_proximity_salted"
+    data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     def refer_dtype(self):
-        return strax.unpack_dtype(strax.to_numpy_dtype(super(SaltingPeakProximity, self).dtype))
+        return strax.unpack_dtype(strax.to_numpy_dtype(super(PeakProximitySalted, self).dtype))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
@@ -26,43 +26,43 @@ class SaltingPeakProximity(PeakProximity):
         ]
         return dtype
 
-    def compute(self, salting_peaks, peaks):
-        windows = strax.touching_windows(peaks, salting_peaks, window=self.nearby_window)
+    def compute(self, peaks_salted, peaks):
+        windows = strax.touching_windows(peaks, peaks_salted, window=self.nearby_window)
         n_left, n_tot = self.find_n_competing(
-            peaks, salting_peaks, windows, fraction=self.min_area_fraction
+            peaks, peaks_salted, windows, fraction=self.min_area_fraction
         )
         return dict(
-            time=salting_peaks["time"],
-            endtime=strax.endtime(salting_peaks),
+            time=peaks_salted["time"],
+            endtime=strax.endtime(peaks_salted),
             n_competing=n_tot,
             n_competing_left=n_left,
-            salt_number=salting_peaks["salt_number"],
+            salt_number=peaks_salted["salt_number"],
         )
 
     @staticmethod
     @numba.jit(nopython=True, nogil=True, cache=True)
-    def find_n_competing(peaks, salting_peaks, windows, fraction):
-        n_left = np.zeros(len(salting_peaks), dtype=np.int32)
+    def find_n_competing(peaks, peaks_salted, windows, fraction):
+        n_left = np.zeros(len(peaks_salted), dtype=np.int32)
         n_tot = n_left.copy()
         areas = peaks["area"]
-        salting_areas = salting_peaks["area"]
+        areas_salted = peaks_salted["area"]
 
-        dig = np.searchsorted(peaks["center_time"], salting_peaks["center_time"])
+        dig = np.searchsorted(peaks["center_time"], peaks_salted["center_time"])
 
-        for i, peak in enumerate(salting_peaks):
+        for i, peak in enumerate(peaks_salted):
             left_i, right_i = windows[i]
-            threshold = salting_areas[i] * fraction
+            threshold = areas_salted[i] * fraction
             n_left[i] = np.sum(areas[left_i : dig[i]] > threshold)
             n_tot[i] = n_left[i] + np.sum(areas[dig[i] : right_i] > threshold)
 
         return n_left, n_tot
 
 
-class SaltingPeakShadow(PeakShadow):
+class PeakShadowSalted(PeakShadow):
     __version__ = "0.0.0"
-    depends_on = ("salting_peaks", "peak_basics", "peak_positions")
-    provides = "salting_peak_shadow"
-    data_kind = "salting_peaks"
+    depends_on = ("peaks_salted", "peak_basics", "peak_positions")
+    provides = "peak_shadow_salted"
+    data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     def infer_dtype(self):
@@ -72,17 +72,17 @@ class SaltingPeakShadow(PeakShadow):
         ]
         return dtype
 
-    def compute(self, salting_peaks, peaks):
-        result = self.compute_shadow(peaks, salting_peaks)
-        result["salt_number"] = salting_peaks["salt_number"]
+    def compute(self, peaks_salted, peaks):
+        result = self.compute_shadow(peaks, peaks_salted)
+        result["salt_number"] = peaks_salted["salt_number"]
         return result
 
 
-class SaltingPeakAmbience(PeakAmbience):
+class PeakAmbienceSalted(PeakAmbience):
     __version__ = "0.0.0"
-    depends_on = ("salting_peaks", "lone_hits", "peak_basics", "peak_positions")
-    provides = "salting_peak_ambience"
-    data_kind = "salting_peaks"
+    depends_on = ("peaks_salted", "lone_hits", "peak_basics", "peak_positions")
+    provides = "peak_ambience_salted"
+    data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     def infer_dtype(self):
@@ -92,17 +92,17 @@ class SaltingPeakAmbience(PeakAmbience):
         ]
         return dtype
 
-    def compute(self, salting_peaks, lone_hits, peaks):
-        result = self.compute_ambience(lone_hits, peaks, salting_peaks)
-        result["salt_number"] = salting_peaks["salt_number"]
+    def compute(self, peaks_salted, lone_hits, peaks):
+        result = self.compute_ambience(lone_hits, peaks, peaks_salted)
+        result["salt_number"] = peaks_salted["salt_number"]
         return result
 
 
-class SaltingPeakSEDensity(PeakSEDensity):
+class PeakSEDensitySalted(PeakSEDensity):
     __version__ = "0.0.0"
-    depends_on = ("salting_peaks", "peak_basics", "peak_positions")
-    provides = "salting_peak_se_density"
-    data_kind = "salting_peaks"
+    depends_on = ("peaks_salted", "peak_basics", "peak_positions")
+    provides = "peak_se_density_salted"
+    data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
     def infer_dtype(self):
@@ -112,8 +112,8 @@ class SaltingPeakSEDensity(PeakSEDensity):
         ]
         return dtype
 
-    def compute(self, salting_peaks, peaks):
-        se_density = self.compute_se_density(peaks, salting_peaks)
+    def compute(self, peaks_salted, peaks):
+        se_density = self.compute_se_density(peaks, peaks_salted)
         return dict(
-            time=salting_peaks["time"], endtime=strax.endtime(salting_peaks), se_density=se_density
+            time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_density=se_density
         )

@@ -17,7 +17,7 @@ class TestSalting(TestCase):
         assert not os.path.exists(cls.tempdir)
 
         cls.run_id = "0" * 6
-        cls.st = axidence.unsalted_context(output_folder=cls.tempdir)
+        cls.st = axidence.ordinary_context(output_folder=cls.tempdir)
         cls.st.salt_to_context()
 
         cls.st.set_config(
@@ -34,6 +34,6 @@ class TestSalting(TestCase):
             shutil.rmtree(cls.tempdir)
 
     # def test_salting(self):
-    #     """Test the computing of salting_events and salting_peaks."""
-    #     self.st.make(self.run_id, "salting_events", save="salting_events")
-    #     self.st.make(self.run_id, "salting_peaks", save="salting_peaks")
+    #     """Test the computing of events_salting and peaks_salted."""
+    #     self.st.make(self.run_id, "events_salting", save="events_salting")
+    #     self.st.make(self.run_id, "peaks_salted", save="peaks_salted")
