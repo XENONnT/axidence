@@ -2,12 +2,13 @@ import warnings
 from immutabledict import immutabledict
 import numpy as np
 import strax
+from strax import Plugin
 import straxen
 from straxen import units
 from straxen import PeakProximity
 
 from ...utils import copy_dtype
-from ...dtypes import positioned_peak_dtype
+from ...dtypes import peak_positions_dtype, positioned_peak_dtype
 from ...plugin import ExhaustPlugin, RunMetaPlugin
 
 
@@ -477,3 +478,19 @@ class PeakProximityPaired(PeakProximity):
             endtime=strax.endtime(peaks_paired),
             n_competing=n_competing[peaks_event_number_sorted["time"].argsort()],
         )
+
+
+class PeakPositionsPaired(Plugin):
+    __version__ = "0.0.0"
+    depends_on = "peaks_paired"
+    provides = "peak_positions_paired"
+    save_when = strax.SaveWhen.EXPLICIT
+
+    def infer_dtype(self):
+        return peak_positions_dtype()
+
+    def compute(self, peaks_paired):
+        result = np.zeros(len(peaks_paired), dtype=self.dtype)
+        for q in self.dtype.names:
+            result[q] = peaks_paired[q]
+        return result
