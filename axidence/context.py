@@ -54,6 +54,11 @@ def plugin_factory(st, data_type, suffixes):
                 # so we assign the dtype manually and raise error in infer_dtype method
                 raise RuntimeError
 
+            def do_compute(self, chunk_i=None, **kwargs):
+                new_keys = [k.replace(self.suffix, "") for k in kwargs.keys()]
+                new_kwargs = dict(zip(new_keys, kwargs.values()))
+                return super().do_compute(chunk_i=chunk_i, **new_kwargs)
+
         # need to be compatible with strax.camel_to_snake
         # https://github.com/AxFoundation/strax/blob/7da9a2a6375e7614181830484b322389986cf064/strax/context.py#L324
         new_plugin.__name__ = plugin.__name__ + suffix
