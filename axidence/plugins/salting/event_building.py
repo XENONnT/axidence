@@ -5,7 +5,7 @@ import straxen
 from straxen import Events, EventBasics
 
 from ...utils import needed_dtype, merge_salting_real
-from axidence.plugin import ExhaustPlugin
+from ...plugin import ExhaustPlugin
 
 
 class SaltedEvents(Events, ExhaustPlugin):

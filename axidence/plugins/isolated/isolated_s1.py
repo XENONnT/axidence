@@ -4,6 +4,7 @@ from strax import Plugin
 import straxen
 
 from ...utils import needed_dtype, copy_dtype
+from ...dtypes import positioned_peak_dtype
 
 
 class IsolatedS1(Plugin):
@@ -22,10 +23,10 @@ class IsolatedS1(Plugin):
     provides = "isolated_s1"
     data_kind = "isolated_s1"
 
-    isolated_s1_fields = straxen.URLConfig(
-        default={"peaks": np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)).names},
-        type=dict,
-        help="Needed fields in isolated S1",
+    isolated_peaks_fields = straxen.URLConfig(
+        default=np.dtype(positioned_peak_dtype()).names,
+        type=(list, tuple),
+        help="Needed fields in isolated peaks",
     )
 
     groups_seen = 0
@@ -38,7 +39,7 @@ class IsolatedS1(Plugin):
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype("peaks")
-        dtype = copy_dtype(dtype_reference, self.isolated_s1_fields["peaks"])
+        dtype = copy_dtype(dtype_reference, self.isolated_peaks_fields)
         dtype += [
             (("Group number of peaks", "group_number"), np.int64),
         ]

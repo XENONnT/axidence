@@ -1,13 +1,12 @@
-import warnings
 from typing import Tuple
 import numpy as np
-import utilix
 import strax
 import straxen
 from straxen import units, EventBasics, EventPositions
 from straxen.misc import kind_colors
 
 from ...utils import copy_dtype
+from ...plugin import RunMetaPlugin
 
 
 kind_colors.update(
@@ -18,7 +17,7 @@ kind_colors.update(
 )
 
 
-class SaltingEvents(EventPositions, EventBasics):
+class SaltingEvents(EventPositions, EventBasics, RunMetaPlugin):
     __version__ = "0.0.0"
     depends_on: Tuple = tuple()
     provides = "salting_events"
@@ -29,24 +28,6 @@ class SaltingEvents(EventPositions, EventBasics):
         default=None,
         type=(int, None),
         help="Seed for salting",
-    )
-
-    real_run_start = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    real_run_end = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    strict_real_run_time_check = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether to strictly check the real run time is provided",
     )
 
     salting_rate = straxen.URLConfig(
@@ -130,28 +111,6 @@ class SaltingEvents(EventPositions, EventBasics):
             self.rng = np.random.default_rng(seed=int(self.run_id))
         else:
             self.rng = np.random.default_rng(seed=self.salting_seed)
-
-    def init_run_meta(self):
-        """Get the start and end of the run."""
-        if self.real_run_start is None or self.real_run_end is None:
-            if self.strict_real_run_time_check:
-                raise ValueError("Real run start and end times are not provided!")
-            else:
-                warnings.warn(
-                    "Real run start and end times are not provided. Using utilix to get them."
-                )
-            if straxen.utilix_is_configured():
-                coll = utilix.xent_collection()
-            else:
-                raise ValueError("Utilix is not configured cannot determine run mode.")
-            _doc = coll.find_one(
-                {"number": int(self.run_id)}, projection={"start": True, "end": True}
-            )
-            self.run_start = int(_doc["start"].timestamp() * units.s)
-            self.run_end = int(_doc["end"].timestamp() * units.s)
-        else:
-            self.run_start = self.real_run_start
-            self.run_end = self.real_run_end
 
     def sample_time(self):
         """Sample the time according to the start and end of the run."""
