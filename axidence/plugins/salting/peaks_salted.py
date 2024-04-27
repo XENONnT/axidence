@@ -35,8 +35,8 @@ class PeaksSalted(PeakBasics):
         dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [
-            ("x", np.float32, "Reconstructed S2 X position (cm), uncorrected"),
-            ("y", np.float32, "Reconstructed S2 Y position (cm), uncorrected"),
+            (("Reconstructed S2 X position (cm), uncorrected", "x"), np.float32),
+            (("Reconstructed S2 Y position (cm), uncorrected", "y"), np.float32),
             (("Salting number of peaks", "salt_number"), np.int64),
         ]
         return dtype
