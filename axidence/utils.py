@@ -11,6 +11,15 @@ def copy_dtype(dtype_reference, required_names):
     Returns:
         list: copied dtype
     """
+    if not isinstance(required_names, (set, list, tuple)):
+        raise ValueError(
+            "required_names must be set, list or tuple, "
+            f"not {type(required_names)}, got {required_names}!"
+        )
+    if not isinstance(dtype_reference, list):
+        raise ValueError(
+            f"dtype_reference must be list, not {type(dtype_reference)}, got {dtype_reference}!"
+        )
     dtype = []
     for n in required_names:
         for x in dtype_reference:
@@ -20,7 +29,7 @@ def copy_dtype(dtype_reference, required_names):
                 found = True
                 break
         if not found:
-            raise ValueError(f"Could not find {n} in dtype_reference!")
+            raise ValueError(f"Could not find {n} in {dtype_reference}!")
     return dtype
 
 

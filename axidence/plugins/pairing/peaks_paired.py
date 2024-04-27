@@ -2,10 +2,13 @@ import warnings
 from immutabledict import immutabledict
 import numpy as np
 import strax
+from strax import Plugin
 import straxen
 from straxen import units
+from straxen import PeakProximity
 
-from ...dtypes import positioned_peak_dtype
+from ...utils import copy_dtype
+from ...dtypes import peak_positions_dtype
 from ...plugin import ExhaustPlugin, RunMetaPlugin
 
 
@@ -20,18 +23,6 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         default=None,
         type=(int, None),
         help="Seed for pairing",
-    )
-
-    isolated_peaks_fields = straxen.URLConfig(
-        default=np.dtype(positioned_peak_dtype()).names,
-        type=(list, tuple),
-        help="Needed fields in isolated peaks",
-    )
-
-    isolated_events_fields = straxen.URLConfig(
-        default=[],
-        type=(list, tuple),
-        help="Needed fields in isolated events",
     )
 
     real_run_start = straxen.URLConfig(
@@ -118,7 +109,8 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         dtype = strax.unpack_dtype(self.deps["isolated_s1"].dtype_for("isolated_s1"))
         # TODO: reconsider about how to store run_id after implementing super runs
         peaks_dtype = dtype + [
-            (("Event number in this dataset", "event_number"), np.int32),
+            # since event_number is int64 in event_basics
+            (("Event number in this dataset", "event_number"), np.int64),
             # (("Original run id", "origin_run_id"), np.int32),
             (("Original isolated S1/S2 group", "origin_group_number"), np.int32),
             (("Original time of peaks", "origin_time"), np.int64),
@@ -130,7 +122,7 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
             (("Original s2_index in isolated S2", "origin_s2_index"), np.int32),
         ]
         truth_dtype = [
-            (("Event number in this dataset", "event_number"), np.int32),
+            (("Event number in this dataset", "event_number"), np.int64),
             # (("Original run id of isolated S1", "s1_run_id"), np.int32),
             # (("Original run id of isolated S2", "s2_run_id"), np.int32),
             (
@@ -413,4 +405,80 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         # chunk size should be less than default chunk size in strax
         assert result["peaks_paired"].nbytes < self.chunk_target_size_mb * 1e6
 
+        return result
+
+
+class PeakProximityPaired(PeakProximity):
+    __version__ = "0.0.0"
+    depends_on = "peaks_paired"
+    provides = "peak_proximity_paired"
+    data_kind = "peaks_paired"
+    save_when = strax.SaveWhen.EXPLICIT
+
+    use_origin_n_competing = straxen.URLConfig(
+        default=False,
+        type=bool,
+        help="Whether use original n_competing",
+    )
+
+    def infer_dtype(self):
+        dtype_reference = strax.unpack_dtype(self.deps["peaks_paired"].dtype_for("peaks_paired"))
+        required_names = ["time", "endtime", "n_competing"]
+        dtype = copy_dtype(dtype_reference, required_names)
+        return dtype
+
+    def compute(self, peaks_paired):
+        if self.use_origin_n_competing:
+            warnings.warn("Using original n_competing for paired peaks")
+            n_competing = peaks_paired["origin_n_competing"].copy()
+        else:
+            # add `n_competing` to isolated S1 and isolated S2 because injection of peaks
+            # will not consider the competing window because
+            # that window is much larger than the max drift time
+            n_competing = np.zeros(len(peaks_paired), self.dtype["n_competing"])
+            peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
+            event_number, event_number_index, event_number_count = np.unique(
+                peaks_event_number_sorted["event_number"],
+                return_index=True,
+                return_counts=True,
+            )
+            event_number_index = np.append(event_number_index, len(peaks_event_number_sorted))
+            for i in range(len(event_number)):
+                areas = peaks_event_number_sorted["area"][
+                    event_number_index[i] : event_number_index[i + 1]
+                ].copy()
+                types = peaks_event_number_sorted["origin_group_type"][
+                    event_number_index[i] : event_number_index[i + 1]
+                ].copy()
+                n_competing_s = peaks_event_number_sorted["origin_n_competing"][
+                    event_number_index[i] : event_number_index[i + 1]
+                ].copy()
+                threshold = areas * self.min_area_fraction
+                for j in range(event_number_count[i]):
+                    if types[j] == 1:
+                        n_competing_s[j] += np.sum(areas[types == 2] > threshold[j])
+                    elif types[j] == 2:
+                        n_competing_s[j] += np.sum(areas[types == 1] > threshold[j])
+                n_competing[event_number_index[i] : event_number_index[i + 1]] = n_competing_s
+
+        return dict(
+            time=peaks_paired["time"],
+            endtime=strax.endtime(peaks_paired),
+            n_competing=n_competing[peaks_event_number_sorted["time"].argsort()],
+        )
+
+
+class PeakPositionsPaired(Plugin):
+    __version__ = "0.0.0"
+    depends_on = "peaks_paired"
+    provides = "peak_positions_paired"
+    save_when = strax.SaveWhen.EXPLICIT
+
+    def infer_dtype(self):
+        return peak_positions_dtype()
+
+    def compute(self, peaks_paired):
+        result = np.zeros(len(peaks_paired), dtype=self.dtype)
+        for q in self.dtype.names:
+            result[q] = peaks_paired[q]
         return result
