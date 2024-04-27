@@ -123,6 +123,8 @@ def replication_tree(st, suffixes=["Paired", "Salted"], assign_attributes=None, 
     provides and data_kind as the plugins in original tree.
     """
     if assign_attributes is None:
+        # this is due to some features are assigned in `infer_dtype` of the original plugins:
+        # https://github.com/XENONnT/straxen/blob/e555c7dcada2743d2ea627ea49df783e9dba40e3/straxen/plugins/events/event_basics.py#L69
         assign_attributes = {"EventBasics": ["peak_properties", "posrec_save"]}
 
     snakes = ["_" + strax.camel_to_snake(suffix) for suffix in suffixes]

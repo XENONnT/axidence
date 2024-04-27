@@ -8,7 +8,7 @@ from straxen import units
 from straxen import PeakProximity
 
 from ...utils import copy_dtype
-from ...dtypes import peak_positions_dtype, positioned_peak_dtype
+from ...dtypes import peak_positions_dtype
 from ...plugin import ExhaustPlugin, RunMetaPlugin
 
 
@@ -23,18 +23,6 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         default=None,
         type=(int, None),
         help="Seed for pairing",
-    )
-
-    isolated_peaks_fields = straxen.URLConfig(
-        default=np.dtype(positioned_peak_dtype()).names,
-        type=(list, tuple),
-        help="Needed fields in isolated peaks",
-    )
-
-    isolated_events_fields = straxen.URLConfig(
-        default=[],
-        type=(list, tuple),
-        help="Needed fields in isolated events",
     )
 
     real_run_start = straxen.URLConfig(
