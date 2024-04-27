@@ -27,6 +27,7 @@ from axidence import (
     PeakProximityPaired,
     PeakPositionsPaired,
     EventInfosPaired,
+    PairingExists,
 )
 
 export, __all__ = strax.exporter()
@@ -172,6 +173,7 @@ def _pair_to_context(self):
             PeakProximityPaired,
             PeakPositionsPaired,
             EventInfosPaired,
+            PairingExists,
         )
     )
 
