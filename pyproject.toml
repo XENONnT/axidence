@@ -1,26 +1,14 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool]
+[tool.poetry]
 name = "axidence"
 version = "0.2.0"
 description = "strax-based data-driven accidental coincidence background simulation and peak-level salting"
 readme = "README.md"
-license.file = "LICENSE"
+license = "BSD-3-Clause"
 authors = [
-  { name = "Dacheng Xu", email = "dx2227@columbia.edu" },
-]
-maintainers = [
-  { name = "Dacheng Xu", email = "dx2227@columbia.edu" },
+  "Dacheng Xu, <dx2227@columbia.edu>",
 ]
 requires-python = ">=3.9"
-
-dependencies = [
-  "strax",
-  "straxen",
-]
-
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: BSD License",
@@ -30,7 +18,13 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Physics",
 ]
+repository = "https://github.com/dachengx/axidence"
+documentation = "https://readthedocs.org/projects/axidence/"
 
-[project.urls]
-Homepage = "https://github.com/dachengx/axidence"
-Documentation = "https://readthedocs.org/projects/axidence/"
+[tool.poetry.dependencies]
+strax = ">=1.6.2"
+straxen = ">=2.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.8", "setuptools>=61.0"]
+build-backend = "poetry.core.masonry.api"
