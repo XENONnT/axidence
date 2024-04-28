@@ -4,7 +4,7 @@ name = "axidence"
 version = "0.2.0"
 description = "strax-based data-driven accidental coincidence background simulation and peak-level salting"
 readme = "README.md"
-license.file = "LICENSE"
+license = "BSD-3-Clause"
 authors = [
   "Dacheng Xu, <dx2227@columbia.edu>",
 ]
