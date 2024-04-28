@@ -1,3 +1,10 @@
+v0.2.1 / 2024-04-28
+-------------------
+* Use poetry by @dachengx in https://github.com/dachengx/axidence/pull/45
+
+**Full Changelog**: https://github.com/dachengx/axidence/compare/v0.2.0...v0.2.1
+
+
 v0.2.0 / 2024-04-27
 -------------------
 * Add `EventBuilding` cut by @dachengx in https://github.com/dachengx/axidence/pull/20
