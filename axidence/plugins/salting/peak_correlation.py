@@ -1,7 +1,7 @@
 import numba
 import numpy as np
 import strax
-from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakSEDensity
+from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEDensity
 
 from ...utils import copy_dtype
 
@@ -94,6 +94,26 @@ class PeakAmbienceSalted(PeakAmbience):
 
     def compute(self, peaks_salted, lone_hits, peaks):
         result = self.compute_ambience(lone_hits, peaks, peaks_salted)
+        result["salt_number"] = peaks_salted["salt_number"]
+        return result
+
+
+class PeakNearestTriggeringSalted(PeakNearestTriggering):
+    __version__ = "0.0.0"
+    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    provides = "peak_nearest_triggering_salted"
+    data_kind = "peaks_salted"
+    save_when = strax.SaveWhen.EXPLICIT
+
+    def infer_dtype(self):
+        dtype = super().infer_dtype()
+        dtype += [
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
+
+    def compute(self, peaks_salted, peaks):
+        result = self.compute_triggering(peaks, peaks_salted)
         result["salt_number"] = peaks_salted["salt_number"]
         return result
 
