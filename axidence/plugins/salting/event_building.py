@@ -10,6 +10,7 @@ from ...plugin import ExhaustPlugin
 
 class EventsSalted(Events, ExhaustPlugin):
     __version__ = "0.1.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
     provides = "events_salted"
     data_kind = "events_salted"
@@ -111,6 +112,7 @@ class EventsSalted(Events, ExhaustPlugin):
 
 class EventBasicsSalted(EventBasics, ExhaustPlugin):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on: Tuple[str, ...] = (
         "events_salted",
         "peaks_salted",

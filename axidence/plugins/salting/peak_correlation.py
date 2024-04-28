@@ -8,6 +8,7 @@ from ...utils import copy_dtype
 
 class PeakProximitySalted(PeakProximity):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "peak_basics")
     provides = "peak_proximity_salted"
     data_kind = "peaks_salted"
@@ -60,6 +61,7 @@ class PeakProximitySalted(PeakProximity):
 
 class PeakShadowSalted(PeakShadow):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "peak_basics", "peak_positions")
     provides = "peak_shadow_salted"
     data_kind = "peaks_salted"
@@ -80,6 +82,7 @@ class PeakShadowSalted(PeakShadow):
 
 class PeakAmbienceSalted(PeakAmbience):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "lone_hits", "peak_basics", "peak_positions")
     provides = "peak_ambience_salted"
     data_kind = "peaks_salted"
@@ -100,6 +103,7 @@ class PeakAmbienceSalted(PeakAmbience):
 
 class PeakNearestTriggeringSalted(PeakNearestTriggering):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
     provides = "peak_nearest_triggering_salted"
     data_kind = "peaks_salted"
@@ -120,6 +124,7 @@ class PeakNearestTriggeringSalted(PeakNearestTriggering):
 
 class PeakSEDensitySalted(PeakSEDensity):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = ("peaks_salted", "peak_basics", "peak_positions")
     provides = "peak_se_density_salted"
     data_kind = "peaks_salted"
