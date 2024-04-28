@@ -8,6 +8,7 @@ from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
     PeakAmbienceSalted,
+    PeakNearestTriggeringSalted,
     PeakSEDensitySalted,
 )
 from axidence import (
@@ -15,6 +16,7 @@ from axidence import (
     EventBasicsSalted,
     EventShadowSalted,
     EventAmbienceSalted,
+    EventNearestTriggeringSalted,
     EventSEDensitySalted,
     EventBuilding,
 )
@@ -150,11 +152,13 @@ def _salt_to_context(self):
             PeakProximitySalted,
             PeakShadowSalted,
             PeakAmbienceSalted,
+            PeakNearestTriggeringSalted,
             PeakSEDensitySalted,
             EventsSalted,
             EventBasicsSalted,
             EventShadowSalted,
             EventAmbienceSalted,
+            EventNearestTriggeringSalted,
             EventSEDensitySalted,
         )
     )
