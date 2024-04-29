@@ -10,6 +10,7 @@ from ...plugin import ExhaustPlugin
 
 class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = "run_meta"
     provides = "events_salting"
     data_kind = "events_salting"
@@ -114,8 +115,8 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         """Sample the time according to the start and end of the run."""
         self.event_time_interval = int(units.s // self.salting_rate)
 
-        # if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
-        #     raise ValueError("Salting rate is too high according the drift time window!")
+        if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
+            raise ValueError("Salting rate is too high according the drift time window!")
 
         time = np.arange(
             start + self.veto_length_run_start,
@@ -189,7 +190,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
         self.set_chunk_splitting()
 
-    def compute(self, events, start, end):
+    def compute(self, run_meta, start, end):
         """Copy and assign the salting events into chunk."""
         self.sampling(start, end)
         for chunk_i in range(len(self.slices)):
@@ -204,6 +205,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
                 _end = end
             else:
                 _end = self.events_salting["time"][indices[1] - 1] + self.time_right
+
             yield self.chunk(
                 start=_start, end=_end, data=self.events_salting[indices[0] : indices[1]]
             )

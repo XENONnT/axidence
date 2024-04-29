@@ -8,6 +8,7 @@ from ...utils import copy_dtype
 
 class PeaksSalted(PeakBasics):
     __version__ = "0.0.0"
+    child_plugin = True
     depends_on = "events_salting"
     provides = "peaks_salted"
     data_kind = "peaks_salted"

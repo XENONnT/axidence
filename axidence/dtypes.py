@@ -7,10 +7,12 @@ from straxen.misc import kind_colors
 
 kind_colors.update(
     {
+        "run_meta": "#ffff00",
         "events_salting": "#0080ff",
         "peaks_salted": "#00c0ff",
         "events_salted": "#00ffff",
         "peaks_paired": "#ff00ff",
+        "truth_paired": "#ff00ff",
         "events_paired": "#ffccff",
         "isolated_s1": "#80ff00",
         "isolated_s2": "#80ff00",

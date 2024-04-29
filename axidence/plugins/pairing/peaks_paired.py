@@ -9,10 +9,10 @@ from straxen import PeakProximity
 
 from ...utils import copy_dtype
 from ...dtypes import peak_positions_dtype
-from ...plugin import ExhaustPlugin, RunMetaPlugin
+from ...plugin import ExhaustPlugin
 
 
-class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
+class PeaksPaired(ExhaustPlugin):
     __version__ = "0.0.0"
     depends_on = ("isolated_s1", "isolated_s2", "cut_event_building_salted", "event_shadow_salted")
     provides = ("peaks_paired", "truth_paired")
@@ -23,24 +23,6 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         default=None,
         type=(int, None),
         help="Seed for pairing",
-    )
-
-    real_run_start = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    real_run_end = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    strict_real_run_time_check = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether to strictly check the real run time is provided",
     )
 
     min_drift_length = straxen.URLConfig(
@@ -135,7 +117,6 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         return dict(peaks_paired=peaks_dtype, truth_paired=truth_dtype)
 
     def setup(self, prepare=True):
-        self.init_run_meta()
         self.min_drift_time = int(self.min_drift_length / self.electron_drift_velocity)
         self.max_drift_time = int(self.max_drift_length / self.electron_drift_velocity)
         if self.pairing_seed is None:
@@ -211,6 +192,8 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
 
     def build_arrays(
         self,
+        start,
+        end,
         drift_time,
         s1_group_number,
         s2_group_number,
@@ -223,9 +206,7 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
 
         # set center time of S1 & S2
         # paired events are separated by roughly `event_interval`
-        s1_center_time = (
-            np.arange(len(drift_time)).astype(int) * self.paring_event_interval + self.run_start
-        )
+        s1_center_time = np.arange(len(drift_time)).astype(int) * self.paring_event_interval + start
         s2_center_time = s1_center_time + drift_time
         # total number of isolated S1 & S2 peaks
         peaks_arrays = np.zeros(n_peaks.sum(), dtype=self.dtype["peaks_paired"])
@@ -322,7 +303,7 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, events_salted):
+    def compute(self, isolated_s1, isolated_s2, events_salted, start, end):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -350,7 +331,7 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
             paring_rate_full, s1_group_number, s2_group_number, drift_time = self.simple_pairing(
                 isolated_s1,
                 main_isolated_s2,
-                self.run_time,
+                (end - start) / units.s,
                 self.max_drift_time,
                 self.min_drift_time,
                 paring_rate_correction,
@@ -377,6 +358,8 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         chunk_i = 0
         left_i, right_i = slices[chunk_i]
         peaks_arrays, truth_arrays = self.build_arrays(
+            start,
+            end,
             drift_time[left_i:right_i],
             s1_group_number[left_i:right_i],
             s2_group_number[left_i:right_i],
@@ -389,18 +372,14 @@ class PeaksPaired(ExhaustPlugin, RunMetaPlugin):
         peaks_arrays["event_number"] += left_i
         truth_arrays["event_number"] += left_i
 
-        start = (
-            self.run_start + left_i * self.paring_event_interval - self.paring_event_interval // 2
-        )
-        end = (
-            self.run_start + right_i * self.paring_event_interval - self.paring_event_interval // 2
-        )
+        _start = start + left_i * self.paring_event_interval - int(self.paring_event_interval // 2)
+        _end = start + right_i * self.paring_event_interval - int(self.paring_event_interval // 2)
         result = dict()
         result["peaks_paired"] = self.chunk(
-            start=start, end=end, data=peaks_arrays, data_type="peaks_paired"
+            start=_start, end=_end, data=peaks_arrays, data_type="peaks_paired"
         )
         result["truth_paired"] = self.chunk(
-            start=start, end=end, data=truth_arrays, data_type="truth_paired"
+            start=_start, end=_end, data=truth_arrays, data_type="truth_paired"
         )
         # chunk size should be less than default chunk size in strax
         assert result["peaks_paired"].nbytes < self.chunk_target_size_mb * 1e6
