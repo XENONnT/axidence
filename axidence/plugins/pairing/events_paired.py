@@ -18,7 +18,7 @@ class EventsForcePaired(OverlapWindowPlugin):
     data_kind = "events_paired"
     save_when = strax.SaveWhen.EXPLICIT
 
-    paring_event_interval = straxen.URLConfig(
+    paring_time_interval = straxen.URLConfig(
         default=int(1e8),
         type=int,
         help="The interval which separates two events S1 [ns]",
@@ -31,7 +31,7 @@ class EventsForcePaired(OverlapWindowPlugin):
         return dtype
 
     def get_window_size(self):
-        return 10 * self.paring_event_interval
+        return 10 * self.paring_time_interval
 
     def compute(self, peaks_paired):
         peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
