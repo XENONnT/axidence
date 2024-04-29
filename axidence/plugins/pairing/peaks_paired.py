@@ -201,6 +201,18 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         return digit
 
     @staticmethod
+    def preprocess_shadow(data, shadow_deltatime_exponent, delta_t=0, prefix=""):
+        dt_s2_time_shadow = np.clip(data[f"{prefix}dt_s2_time_shadow"] - delta_t, 1, np.inf)
+        pre_s2_area = (
+            data[f"{prefix}shadow_s2_time_shadow"]
+            * data[f"{prefix}dt_s2_time_shadow"] ** -shadow_deltatime_exponent
+        )
+        x = np.log10(pre_s2_area * dt_s2_time_shadow**shadow_deltatime_exponent)
+        y = np.sqrt(np.log10(pre_s2_area) ** 2 + np.log10(dt_s2_time_shadow) ** 2)
+        sample = np.stack([x, y]).T
+        return sample
+
+    @staticmethod
     def shadow_matching(
         s1,
         s2,
@@ -223,26 +235,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # 2D equal binning
         # prepare the 2D space, x is log(S2/dt), y is (log(S2)**2+log(dt)**2)**0.5
         # because these 2 dimension is orthogonal
-        x = np.log10(shadow_reference["shadow_s2_time_shadow"])
-        y = np.sqrt(
-            np.log10(
-                shadow_reference["shadow_s2_time_shadow"]
-                * shadow_reference["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
-            )
-            ** 2
-            + np.log10(shadow_reference["dt_s2_time_shadow"]) ** 2
+        sampled_correlation = PeaksPaired.preprocess_shadow(
+            shadow_reference, shadow_deltatime_exponent
         )
-        sampled_correlation = np.stack([x, y]).T
-
-        x = np.log10(s1["shadow_s2_time_shadow"])
-        y = np.sqrt(
-            np.log10(
-                s1["shadow_s2_time_shadow"] * s1["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
-            )
-            ** 2
-            + np.log10(s1["dt_s2_time_shadow"]) ** 2
-        )
-        s1_sample = np.stack([x, y]).T
+        s1_sample = PeaksPaired.preprocess_shadow(s1, shadow_deltatime_exponent)
 
         # use (x, y) distribution of isolated S1 as reference
         # because it is more intense when shadow(S2/dt) is large
@@ -251,7 +247,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # largest bin number in x & y dimension
         n_shadow_bins = max_n_shadow_bins
         # find suitable bin number
-        # we do not allow binning which provides empty bin(count = 0) for Shadow's (x,y)
+        # we do not allow binning which provides empty bin(count = 0) for Shadow's (x, y)
         # because it is denominator
         bins_find = False
         while not bins_find:
@@ -307,19 +303,15 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 delta_t = drift_time_bin_center[i]
             else:
                 delta_t = 0
-            s2_shadow_dt_request = np.clip(s2["dt_s2_time_shadow"] - delta_t, 1, np.inf)
-            pre_area_s2 = (
-                s2["shadow_s2_time_shadow"] * s2["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
+            data_sample = PeaksPaired.preprocess_shadow(
+                s2, shadow_deltatime_exponent, delta_t=delta_t
             )
-            x = np.log10(pre_area_s2 * s2_shadow_dt_request**shadow_deltatime_exponent)
-            y = np.sqrt(np.log10(pre_area_s2) ** 2 + np.log10(s2_shadow_dt_request) ** 2)
-            data_sample = np.stack([x, y]).T
             ge.check_sample_sanity(data_sample)
-            # apply binning to (x,y)
+            # apply binning to (x, y)
             s2_shadow_count = ge.apply_irregular_binning(
                 data_sample=data_sample, bin_edges=bin_edges
             )
-            # conditional rate is AC rate in each (x,y) bin
+            # conditional rate is AC rate in each (x, y) bin
             ac_rate_conditional = (
                 s1_shadow_count / shadow_run_time * s2_shadow_count / shadow_run_time
             )
