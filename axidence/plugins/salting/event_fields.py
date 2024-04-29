@@ -7,6 +7,7 @@ from ...utils import merge_salted_real
 
 
 class EventFieldsSalted(Plugin):
+    child_plugin = True
 
     def compute(self, events_salted, peaks_salted, peaks):
         _peaks = merge_salted_real(peaks_salted, peaks, peaks.dtype)

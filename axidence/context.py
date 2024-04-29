@@ -3,7 +3,7 @@ from tqdm import tqdm
 import strax
 import straxen
 
-from axidence import EventsSalting, PeaksSalted
+from axidence import RunMeta, EventsSalting, PeaksSalted
 from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
@@ -147,6 +147,7 @@ def _salt_to_context(self):
     """Register the salted plugins to the context."""
     self.register(
         (
+            RunMeta,
             EventsSalting,
             PeaksSalted,
             PeakProximitySalted,
