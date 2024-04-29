@@ -1,16 +1,16 @@
-from typing import Tuple
 import numpy as np
 import strax
+from strax import DownChunkingPlugin
 import straxen
 from straxen import units, EventBasics, EventPositions
 
 from ...utils import copy_dtype
-from ...plugin import RunMetaPlugin
+from ...plugin import ExhaustPlugin
 
 
-class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
+class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
     __version__ = "0.0.0"
-    depends_on: Tuple = tuple()
+    depends_on = "run_meta"
     provides = "events_salting"
     data_kind = "events_salting"
     save_when = strax.SaveWhen.EXPLICIT
@@ -25,24 +25,6 @@ class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
         default=10,
         type=(int, float),
         help="Rate of salting in Hz",
-    )
-
-    real_run_start = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    real_run_end = straxen.URLConfig(
-        default=None,
-        type=(int, None),
-        help="Real start time of run [ns]",
-    )
-
-    strict_real_run_time_check = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether to strictly check the real run time is provided",
     )
 
     s1_area_range = straxen.URLConfig(
@@ -115,26 +97,31 @@ class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
         dtype += [(("Salting number of events", "salt_number"), np.int64)]
         return dtype
 
+    def setup(self):
+        super(EventPositions, self).setup()
+        super(EventsSalting, self).setup()
+
+        self.init_rng()
+
     def init_rng(self):
+        """Initialize the random number generator."""
         if self.salting_seed is None:
             self.rng = np.random.default_rng(seed=int(self.run_id))
         else:
             self.rng = np.random.default_rng(seed=self.salting_seed)
 
-    def sample_time(self):
+    def sample_time(self, start, end):
         """Sample the time according to the start and end of the run."""
-        self.event_time_interval = units.s // self.salting_rate
+        self.event_time_interval = int(units.s // self.salting_rate)
 
-        if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
-            raise ValueError("Salting rate is too high according the drift time window!")
+        # if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
+        #     raise ValueError("Salting rate is too high according the drift time window!")
 
         time = np.arange(
-            self.run_start + self.veto_length_run_start,
-            self.run_end - self.veto_length_run_end,
+            start + self.veto_length_run_start,
+            end - self.veto_length_run_end,
             self.event_time_interval,
         ).astype(np.int64)
-        self.time_left = self.event_time_interval // 2
-        self.time_right = self.event_time_interval - self.time_left
         return time
 
     def inverse_field_distortion(self, x, y, z):
@@ -156,15 +143,9 @@ class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
         self.time_left = self.event_time_interval // 2
         self.time_right = self.event_time_interval - self.time_left
 
-    def setup(self):
-        """Sample the features of events."""
-        super(EventPositions, self).setup()
-        super(EventsSalting, self).setup()
-
-        self.init_rng()
-        self.init_run_meta()
-
-        time = self.sample_time()
+    def sampling(self, start, end):
+        """Sample the features of events, (t, x, y, z, S1, S2) et al."""
+        time = self.sample_time(start, end)
         self.n_events = len(time)
         self.events_salting = np.empty(self.n_events, dtype=self.dtype)
         self.events_salting["salt_number"] = np.arange(self.n_events)
@@ -208,26 +189,21 @@ class EventsSalting(EventPositions, EventBasics, RunMetaPlugin):
 
         self.set_chunk_splitting()
 
-    def compute(self, chunk_i):
+    def compute(self, events, start, end):
         """Copy and assign the salting events into chunk."""
-        indices = self.slices[chunk_i]
+        self.sampling(start, end)
+        for chunk_i in range(len(self.slices)):
+            indices = self.slices[chunk_i]
 
-        if chunk_i == 0:
-            start = self.run_start
-        else:
-            start = self.events_salting["time"][indices[0]] - self.time_left
+            if chunk_i == 0:
+                _start = start
+            else:
+                _start = self.events_salting["time"][indices[0]] - self.time_left
 
-        if chunk_i == len(self.slices) - 1:
-            end = self.run_end
-        else:
-            end = self.events_salting["time"][indices[1] - 1] + self.time_right
-        return self.chunk(start=start, end=end, data=self.events_salting[indices[0] : indices[1]])
-
-    def is_ready(self, chunk_i):
-        if chunk_i < len(self.slices):
-            return True
-        else:
-            return False
-
-    def source_finished(self):
-        return True
+            if chunk_i == len(self.slices) - 1:
+                _end = end
+            else:
+                _end = self.events_salting["time"][indices[1] - 1] + self.time_right
+            yield self.chunk(
+                start=_start, end=_end, data=self.events_salting[indices[0] : indices[1]]
+            )
