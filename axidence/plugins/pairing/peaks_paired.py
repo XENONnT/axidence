@@ -1,11 +1,13 @@
 import warnings
 from immutabledict import immutabledict
 import numpy as np
+from scipy.stats import poisson
 import strax
 from strax import Plugin, DownChunkingPlugin
 import straxen
 from straxen import units
 from straxen import PeakProximity
+import GOFevaluation as ge
 
 from ...utils import copy_dtype
 from ...dtypes import peak_positions_dtype
@@ -14,7 +16,7 @@ from ...plugin import ExhaustPlugin
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     __version__ = "0.0.0"
-    depends_on = ("isolated_s1", "isolated_s2", "cut_event_building_salted", "event_shadow_salted")
+    depends_on = ("isolated_s1", "isolated_s2", "peaks_salted", "peak_shadow_salted")
     provides = ("peaks_paired", "truth_paired")
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
@@ -44,10 +46,16 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         help="Vertical electron drift velocity in cm/ns (1e4 m/ms)",
     )
 
-    n_drift_time_bin = straxen.URLConfig(
+    n_drift_time_bins = straxen.URLConfig(
         default=50,
         type=int,
         help="Bin number of drift time",
+    )
+
+    max_n_shadow_bins = straxen.URLConfig(
+        default=30,
+        type=int,
+        help="Max bin number of 2D shadow matching",
     )
 
     isolated_s1_rate_correction = straxen.URLConfig(
@@ -74,6 +82,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=True,
         type=bool,
         help="Whether shift drift time when performing shadow matching",
+    )
+
+    shadow_deltatime_exponent = straxen.URLConfig(
+        default=-1.0, type=float, track=True, help="The exponent of delta t when calculating shadow"
     )
 
     fixed_drift_time = straxen.URLConfig(
@@ -145,6 +157,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     def simple_pairing(
         s1,
         s2,
+        s1_rate,
+        s2_rate,
         run_time,
         max_drift_time,
         min_drift_time,
@@ -153,13 +167,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         fixed_drift_time,
         rng,
     ):
-        s1_rate = len(s1) / run_time
-        s2_rate = len(s2) / run_time
-        print(f"There are {len(s1)} S1 peaks group")
-        print(f"S1 rate is {s1_rate:.3f}Hz")
-        print(f"There are {len(s2)} S2 peaks group")
-        print(f"S2 rate is {s2_rate * 1e3:.3f}mHz")
-
         paring_rate_full = (
             s1_rate * s2_rate * (max_drift_time - min_drift_time) / units.s / paring_rate_correction
         )
@@ -171,6 +178,203 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         else:
             warnings.warn(f"Using fixed drift time {fixed_drift_time}ns")
             drift_time = np.full(n_events, fixed_drift_time)
+        return paring_rate_full, s1_group_number, s2_group_number, drift_time
+
+    def shadow_reference_selection(self, peaks_salted):
+        return peaks_salted[peaks_salted["type"] == 2]
+
+    @staticmethod
+    def digitize2d(data_sample, bin_edges, n_bins):
+        """Get indices of the 2D bins to which each value in input array
+        belongs.
+
+        Args:
+            data_sample: array, data waiting for binning
+        """
+        digit = np.zeros(len(data_sample), dtype=int)
+        # `x_dig` is within [0, len(bin_edges[0])-1]
+        x_dig = np.digitize(data_sample[:, 0], bin_edges[0][1:])
+        for xd in np.unique(x_dig):
+            digit[x_dig == xd] = (
+                np.digitize(data_sample[:, 1][x_dig == xd], bin_edges[1][xd][1:]) + xd * n_bins
+            )
+        return digit
+
+    @staticmethod
+    def shadow_matching(
+        s1,
+        s2,
+        shadow_reference,
+        shadow_deltatime_exponent,
+        max_n_shadow_bins,
+        run_time,
+        max_drift_time,
+        min_drift_time,
+        n_drift_time_bins,
+        shift_dt_shadow_matching,
+        paring_rate_correction,
+        paring_rate_bootstrap_factor,
+        rng,
+        onlyrate=False,
+    ):
+        # perform Shadow matching technique
+        # see details in xenon:xenonnt:ac:prediction:summary#fake-plugin_simulation
+
+        # 2D equal binning
+        # prepare the 2D space, x is log(S2/dt), y is (log(S2)**2+log(dt)**2)**0.5
+        # because these 2 dimension is orthogonal
+        x = np.log10(shadow_reference["shadow_s2_time_shadow"])
+        y = np.sqrt(
+            np.log10(
+                shadow_reference["shadow_s2_time_shadow"]
+                * shadow_reference["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
+            )
+            ** 2
+            + np.log10(shadow_reference["dt_s2_time_shadow"]) ** 2
+        )
+        sampled_correlation = np.stack([x, y]).T
+
+        x = np.log10(s1["shadow_s2_time_shadow"])
+        y = np.sqrt(
+            np.log10(
+                s1["shadow_s2_time_shadow"] * s1["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
+            )
+            ** 2
+            + np.log10(s1["dt_s2_time_shadow"]) ** 2
+        )
+        s1_sample = np.stack([x, y]).T
+
+        # use (x, y) distribution of isolated S1 as reference
+        # because it is more intense when shadow(S2/dt) is large
+        reference_sample = s1_sample
+        ge.check_sample_sanity(reference_sample)
+        # largest bin number in x & y dimension
+        n_shadow_bins = max_n_shadow_bins
+        # find suitable bin number
+        # we do not allow binning which provides empty bin(count = 0) for Shadow's (x,y)
+        # because it is denominator
+        bins_find = False
+        while not bins_find:
+            try:
+                # binning is order [0, 1], important, place do not change this order
+                _, bin_edges = ge.equiprobable_histogram(
+                    data_sample=reference_sample[
+                        reference_sample[:, 0] != reference_sample[:, 0].min()
+                    ],
+                    reference_sample=reference_sample[
+                        reference_sample[:, 0] != reference_sample[:, 0].min()
+                    ],
+                    n_partitions=[n_shadow_bins, n_shadow_bins],
+                )
+                if np.any(
+                    ge.apply_irregular_binning(data_sample=sampled_correlation, bin_edges=bin_edges)
+                    <= 0
+                ):
+                    raise ValueError(
+                        f"Weird! Find empty bin when the bin number is {n_shadow_bins}!"
+                    )
+                bins_find = True
+            except:  # noqa
+                n_shadow_bins -= 1
+            assert n_shadow_bins > 0, "No suitable binning found"
+        print(f"Shadow bins number is {n_shadow_bins}")
+        # apply the binning
+        s1_shadow_count = ge.apply_irregular_binning(data_sample=s1_sample, bin_edges=bin_edges)
+        # s2_shadow_count = ge.apply_irregular_binning(data_sample=s2_sample, bin_edges=bin_edges)
+        sampled_shadow_count = ge.apply_irregular_binning(
+            data_sample=sampled_correlation, bin_edges=bin_edges
+        )
+        # shadow_ratio = s1_shadow_count / sampled_shadow_count
+        shadow_run_time = sampled_shadow_count / sampled_shadow_count.sum() * run_time
+        if not onlyrate:
+            # get indices of the 2D bins
+            s1_digit = PeaksPaired.digitize2d(s1_sample, bin_edges, n_shadow_bins)
+            _s1_group_number = np.arange(len(s1))
+            s1_group_number_list = [
+                _s1_group_number[s1_digit == xd].tolist()
+                for xd in range(n_shadow_bins * n_shadow_bins)
+            ]
+
+        drift_time_bins = np.linspace(min_drift_time, max_drift_time, n_drift_time_bins + 1)
+        drift_time_bin_center = (drift_time_bins[:-1] + drift_time_bins[1:]) / 2
+
+        group_number_list = []
+        _paring_rate_full = np.zeros(len(drift_time_bin_center))
+        for i in range(len(drift_time_bin_center)):
+            if shift_dt_shadow_matching:
+                # different drift time between isolated S1 and S2 indicates
+                # different shadow matching arrangement
+                delta_t = drift_time_bin_center[i]
+            else:
+                delta_t = 0
+            s2_shadow_dt_request = np.clip(s2["dt_s2_time_shadow"] - delta_t, 1, np.inf)
+            pre_area_s2 = (
+                s2["shadow_s2_time_shadow"] * s2["dt_s2_time_shadow"] ** -shadow_deltatime_exponent
+            )
+            x = np.log10(pre_area_s2 * s2_shadow_dt_request**shadow_deltatime_exponent)
+            y = np.sqrt(np.log10(pre_area_s2) ** 2 + np.log10(s2_shadow_dt_request) ** 2)
+            data_sample = np.stack([x, y]).T
+            ge.check_sample_sanity(data_sample)
+            # apply binning to (x,y)
+            s2_shadow_count = ge.apply_irregular_binning(
+                data_sample=data_sample, bin_edges=bin_edges
+            )
+            # conditional rate is AC rate in each (x,y) bin
+            ac_rate_conditional = (
+                s1_shadow_count / shadow_run_time * s2_shadow_count / shadow_run_time
+            )
+            ac_rate_conditional *= (drift_time_bins[i + 1] - drift_time_bins[i]) / units.s
+            ac_rate_conditional *= sampled_shadow_count / sampled_shadow_count.sum()
+            ac_rate_conditional /= paring_rate_correction
+            _paring_rate_full[i] = ac_rate_conditional.sum()
+            if not onlyrate:
+                # expectation of AC in each bin in this run
+                mu_shadow = ac_rate_conditional * run_time * paring_rate_bootstrap_factor
+                count_pairing = np.zeros_like(mu_shadow, dtype=int)
+                for ii in range(mu_shadow.shape[0]):
+                    for jj in range(mu_shadow.shape[1]):
+                        count_pairing[ii, jj] = poisson.rvs(mu=mu_shadow[ii, jj])
+                count_pairing = count_pairing.flatten()
+                # count_pairing = poisson.rvs(mu=mu_shadow).flatten()
+                if count_pairing.max() == 0:
+                    count_pairing[mu_shadow.argmax()] = 1
+                s2_digit = PeaksPaired.digitize2d(data_sample, bin_edges, n_shadow_bins)
+                _s2_group_number = np.arange(len(s2))
+                s2_group_number_list = [
+                    _s2_group_number[s2_digit == xd].tolist()
+                    for xd in range(n_shadow_bins * n_shadow_bins)
+                ]
+                # random sample isolated S1 and S2's group number
+                _s1_group_number = np.hstack(
+                    [
+                        rng.choice(
+                            s1_group_number_list[xd],
+                            size=count_pairing[xd],
+                        )
+                        for xd in range(n_shadow_bins * n_shadow_bins)
+                    ]
+                )
+                _s2_group_number = np.hstack(
+                    [
+                        rng.choice(
+                            s2_group_number_list[xd],
+                            size=count_pairing[xd],
+                        )
+                        for xd in range(n_shadow_bins * n_shadow_bins)
+                    ]
+                )
+                # sample drift time in this bin
+                _drift_time = rng.choice(
+                    round(drift_time_bins[i + 1] - drift_time_bins[i]),
+                    size=count_pairing.sum(),
+                ) + round(drift_time_bins[i])
+                group_number_list.append([_s1_group_number, _s2_group_number, _drift_time])
+        paring_rate_full = _paring_rate_full.sum()
+        if not onlyrate:
+            s1_group_number = np.hstack([group[0] for group in group_number_list]).astype(int)
+            s2_group_number = np.hstack([group[1] for group in group_number_list]).astype(int)
+            drift_time = np.hstack([group[2] for group in group_number_list]).astype(int)
+            assert len(s1_group_number) == len(s2_group_number)
         return paring_rate_full, s1_group_number, s2_group_number, drift_time
 
     def split_chunks(self, n_peaks):
@@ -305,7 +509,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, events_salted, start, end):
+    def compute(self, isolated_s1, isolated_s2, peaks_salted, start, end):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -319,21 +523,40 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             raise NotImplementedError("AC rate correction for isolated S1 is not implemented yet!")
         else:
             paring_rate_correction = 1
-        print(f"Input S1 correction factor is {paring_rate_correction:.3f}")
+        print(f"Isolated S1 correction factor is {paring_rate_correction:.3f}")
 
+        run_time = (end - start) / units.s
+        s1_rate = len(isolated_s1) / run_time
+        s2_rate = len(main_isolated_s2) / run_time
+        print(f"There are {len(isolated_s1)} S1 peaks group")
+        print(f"S1 rate is {s1_rate:.3f}Hz")
+        print(f"There are {len(main_isolated_s2)} S2 peaks group")
+        print(f"S2 rate is {s2_rate * 1e3:.3f}mHz")
         if self.apply_shadow_matching:
             # simulate AC's drift time bin by bin
-            # print(f"Drift time bins number is {self.n_drift_time_bin}")
-            # drift_time_bins = np.linspace(
-            #     self.min_drift_time, self.max_drift_time, self.n_drift_time_bin + 1
-            # )
-            # drift_time_bin_center = (drift_time_bins[:-1] + drift_time_bins[1:]) / 2
-            raise NotImplementedError("Shadow matching is not implemented yet!")
+            shadow_reference = self.shadow_reference_selection(peaks_salted)
+            paring_rate_full, s1_group_number, s2_group_number, drift_time = self.shadow_matching(
+                isolated_s1,
+                main_isolated_s2,
+                shadow_reference,
+                self.shadow_deltatime_exponent,
+                self.max_n_shadow_bins,
+                run_time,
+                self.max_drift_time,
+                self.min_drift_time,
+                self.n_drift_time_bins,
+                self.shift_dt_shadow_matching,
+                paring_rate_correction,
+                self.paring_rate_bootstrap_factor,
+                self.rng,
+            )
         else:
             paring_rate_full, s1_group_number, s2_group_number, drift_time = self.simple_pairing(
                 isolated_s1,
                 main_isolated_s2,
-                (end - start) / units.s,
+                s1_rate,
+                s2_rate,
+                run_time,
                 self.max_drift_time,
                 self.min_drift_time,
                 paring_rate_correction,
