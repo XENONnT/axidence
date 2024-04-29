@@ -116,6 +116,7 @@ class EventInfosPaired(Events):
                 np.int8,
             ),
             (("Event number in this dataset", "event_number"), np.int64),
+            (("Normalization of number of paired events", "normalization"), np.float32),
         ]
         return dtype
 
@@ -147,6 +148,7 @@ class EventInfosPaired(Events):
                     "Maybe the paired events overlap."
                 )
             result["event_number"][i] = sp["event_number"][0]
+            result["normalization"][i] = sp["normalization"][0]
             for idx, main_peak in zip([event["s1_index"], event["s2_index"]], ["s1_", "s2_"]):
                 if idx >= 0:
                     for n in self.peak_fields:
