@@ -5,6 +5,7 @@ import straxen
 from straxen import units, EventBasics, EventPositions
 
 from ...utils import copy_dtype
+from ...samplers import SAMPLERS
 from ...plugin import ExhaustPlugin
 
 
@@ -23,7 +24,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     )
 
     salting_rate = straxen.URLConfig(
-        default=10,
+        default=20,
         type=(int, float),
         help="Rate of salting in Hz",
     )
@@ -31,25 +32,25 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     s1_area_range = straxen.URLConfig(
         default=(1, 150),
         type=(list, tuple),
-        help="Range of S1 area",
+        help="Range of S1 area in salting",
     )
 
     s2_area_range = straxen.URLConfig(
         default=(1e2, 2e4),
         type=(list, tuple),
-        help="Range of S2 area",
+        help="Range of S2 area in salting",
     )
 
     s1_distribution = straxen.URLConfig(
-        default="",
+        default="exponential",
         type=str,
-        help="S1 distribution shape",
+        help="S1 distribution shape in salting",
     )
 
     s2_distribution = straxen.URLConfig(
-        default="",
+        default="exponential",
         type=str,
-        help="S2 distribution shape",
+        help="S2 distribution shape in salting",
     )
 
     veto_length_run_start = straxen.URLConfig(
@@ -179,13 +180,14 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
         s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
         s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
-        self.events_salting["s1_area"] = np.exp(
-            self.rng.uniform(np.log(s1_area_range[0]), np.log(s1_area_range[1]), size=self.n_events)
+        self.events_salting["s1_area"] = SAMPLERS[self.s1_distribution](s1_area_range).sample(
+            self.n_events, self.rng
         )
+        self.events_salting["s2_area"] = SAMPLERS[self.s2_distribution](s2_area_range).sample(
+            self.n_events, self.rng
+        )
+        # to prevent numerical errors
         self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
-        self.events_salting["s2_area"] = np.exp(
-            self.rng.uniform(np.log(s2_area_range[0]), np.log(s2_area_range[1]), size=self.n_events)
-        )
         self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
 
         self.set_chunk_splitting()

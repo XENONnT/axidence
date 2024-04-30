@@ -10,13 +10,21 @@ from straxen import PeakProximity
 import GOFevaluation as ge
 
 from ...utils import copy_dtype
+from ...samplers import SAMPLERS
 from ...dtypes import peak_positions_dtype
 from ...plugin import ExhaustPlugin
 
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     __version__ = "0.0.0"
-    depends_on = ("isolated_s1", "isolated_s2", "peaks_salted", "peak_shadow_salted")
+    depends_on = (
+        "isolated_s1",
+        "isolated_s2",
+        "events_salted",
+        "event_basics_salted",
+        "event_shadow_salted",
+        "cut_main_s2_trigger_salted",
+    )
     provides = ("peaks_paired", "truth_paired")
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
@@ -79,6 +87,18 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=2, type=int, help="Minimum tight coincidence necessary to make an S1"
     )
 
+    s2_area_range = straxen.URLConfig(
+        default=(1e2, 2e4),
+        type=(list, tuple),
+        help="Range of S2 area in salting",
+    )
+
+    s2_distribution = straxen.URLConfig(
+        default="exponential",
+        type=str,
+        help="S2 distribution shape in salting",
+    )
+
     apply_shadow_matching = straxen.URLConfig(
         default=True,
         type=bool,
@@ -89,6 +109,18 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=True,
         type=bool,
         help="Whether shift drift time when performing shadow matching",
+    )
+
+    apply_shadow_reweight = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether perform shadow reweight",
+    )
+
+    shadow_reweight_n_bins = straxen.URLConfig(
+        default=50,
+        type=int,
+        help="Bin number of shadow reweight",
     )
 
     shadow_deltatime_exponent = straxen.URLConfig(
@@ -204,8 +236,35 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             drift_time,
         )
 
-    def shadow_reference_selection(self, peaks_salted):
-        return peaks_salted[peaks_salted["type"] == 2]
+    def shadow_reference_selection(self, events_salted, s2):
+        """Select the reference events for shadow matching, also return
+        weights."""
+        reference = events_salted[events_salted["cut_main_s2_trigger_salted"]]
+        if self.apply_shadow_reweight:
+            sampler = SAMPLERS[self.s2_distribution](
+                self.s2_area_range, self.shadow_reweight_n_bins
+            )
+            weight = sampler.reweight(reference["s2_area"], s2["s2_area"])
+        else:
+            weight = np.ones(len(reference))
+        weight /= weight.sum()
+        if np.any(np.isnan(weight)):
+            raise ValueError("Some weights are NaN!")
+        dtype = np.dtype(
+            [
+                ("s2_area", float),
+                ("s2_dt_s2_time_shadow", float),
+                ("s2_shadow_s2_time_shadow", float),
+                ("weight", float),
+            ]
+        )
+        shadow_reference = np.zeros(len(reference), dtype=dtype)
+        for n in dtype.names:
+            if n == "weight":
+                shadow_reference[n] = weight
+            else:
+                shadow_reference[n] = reference[n]
+        return shadow_reference
 
     @staticmethod
     def digitize2d(data_sample, bin_edges, n_bins):
@@ -242,26 +301,32 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         s1,
         s2,
         shadow_reference,
-        shadow_deltatime_exponent,
-        max_n_shadow_bins,
         run_time,
         max_drift_time,
         min_drift_time,
-        n_drift_time_bins,
-        shift_dt_shadow_matching,
-        paring_rate_correction,
-        paring_rate_bootstrap_factor,
         rng,
         preprocess_shadow,
+        paring_rate_bootstrap_factor=1e2,
+        paring_rate_correction=1.0,
+        shift_dt_shadow_matching=True,
+        n_drift_time_bins=50,
+        shadow_deltatime_exponent=-1.0,
+        max_n_shadow_bins=30,
         onlyrate=False,
     ):
+        if paring_rate_bootstrap_factor < 1.0:
+            raise ValueError("Bootstrap factor should be larger than 1!")
+        if paring_rate_correction > 1.0:
+            raise ValueError("Correction factor should be smaller than 1!")
         # perform Shadow matching technique
         # see details in xenon:xenonnt:ac:prediction:summary#fake-plugin_simulation
 
         # 2D equal binning
         # prepare the 2D space, x is log(S2/dt), y is (log(S2)**2+log(dt)**2)**0.5
         # because these 2 dimension is orthogonal
-        sampled_correlation = preprocess_shadow(shadow_reference, shadow_deltatime_exponent)
+        sampled_correlation = preprocess_shadow(
+            shadow_reference, shadow_deltatime_exponent, prefix="s2_"
+        )
         s1_sample = preprocess_shadow(s1, shadow_deltatime_exponent)
 
         # use (x, y) distribution of isolated S1 as reference
@@ -287,7 +352,11 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                     n_partitions=[n_shadow_bins, n_shadow_bins],
                 )
                 if np.any(
-                    ge.apply_irregular_binning(data_sample=sampled_correlation, bin_edges=bin_edges)
+                    ge.apply_irregular_binning(
+                        data_sample=sampled_correlation,
+                        bin_edges=bin_edges,
+                        data_sample_weights=shadow_reference["weight"],
+                    )
                     <= 0
                 ):
                     raise ValueError(
@@ -302,7 +371,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         s1_shadow_count = ge.apply_irregular_binning(data_sample=s1_sample, bin_edges=bin_edges)
         # s2_shadow_count = ge.apply_irregular_binning(data_sample=s2_sample, bin_edges=bin_edges)
         sampled_shadow_count = ge.apply_irregular_binning(
-            data_sample=sampled_correlation, bin_edges=bin_edges
+            data_sample=sampled_correlation,
+            bin_edges=bin_edges,
+            data_sample_weights=shadow_reference["weight"],
         )
         # shadow_ratio = s1_shadow_count / sampled_shadow_count
         shadow_run_time = sampled_shadow_count / sampled_shadow_count.sum() * run_time
@@ -528,7 +599,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, peaks_salted, start, end):
+    def compute(self, isolated_s1, isolated_s2, events_salted, start, end):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -558,22 +629,24 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             if mask.sum() != 0:
                 if self.apply_shadow_matching:
                     # simulate AC's drift time bin by bin
-                    shadow_reference = self.shadow_reference_selection(peaks_salted)
+                    shadow_reference = self.shadow_reference_selection(
+                        events_salted, main_isolated_s2
+                    )
                     truth = self.shadow_matching(
                         isolated_s1[mask],
                         main_isolated_s2,
                         shadow_reference,
-                        self.shadow_deltatime_exponent,
-                        self.max_n_shadow_bins,
                         run_time,
                         self.max_drift_time,
                         self.min_drift_time,
-                        self.n_drift_time_bins,
-                        self.shift_dt_shadow_matching,
-                        paring_rate_correction,
-                        self.bootstrap_factor[i],
                         self.rng,
                         self.preprocess_shadow,
+                        self.bootstrap_factor[i],
+                        paring_rate_correction,
+                        self.shift_dt_shadow_matching,
+                        self.n_drift_time_bins,
+                        self.shadow_deltatime_exponent,
+                        self.max_n_shadow_bins,
                     )
                 else:
                     truth = self.simple_pairing(
