@@ -1,6 +1,8 @@
 from immutabledict import immutabledict
 from tqdm import tqdm
+import numpy as np
 import strax
+from strax import CutPlugin, CutList
 import straxen
 
 from axidence import RunMeta, EventsSalting, PeaksSalted
@@ -18,6 +20,8 @@ from axidence import (
     EventAmbienceSalted,
     EventNearestTriggeringSalted,
     EventSEDensitySalted,
+    MainS1Trigger,
+    MainS2Trigger,
     EventBuilding,
 )
 from axidence import (
@@ -82,7 +86,7 @@ def plugin_factory(st, data_type, suffixes, assign_attributes=None):
         if hasattr(p, "depends_on"):
             new_plugin.depends_on = tuple(d + snake for d in p.depends_on)
         else:
-            raise RuntimeError
+            raise RuntimeError(f"depends_on is not defined for instance of {plugin.__name__}")
 
         if hasattr(p, "provides"):
             new_plugin.provides = tuple(p + snake for p in p.provides)
@@ -113,6 +117,29 @@ def plugin_factory(st, data_type, suffixes, assign_attributes=None):
             new_plugin.dtype = dict(zip([k + snake for k in p.dtype.keys()], p.dtype.values()))
         else:
             new_plugin.dtype = p.dtype
+
+        if isinstance(p, CutPlugin):
+            if hasattr(p, "cut_name"):
+                new_plugin.cut_name = p.cut_name + snake
+            else:
+                raise RuntimeError(f"cut_name is not defined for instance of {plugin.__name__}")
+
+        if isinstance(p, CutList):
+            if hasattr(p, "accumulated_cuts_string"):
+                new_plugin.accumulated_cuts_string = p.accumulated_cuts_string + snake
+            else:
+                raise RuntimeError(
+                    f"accumulated_cuts_string is not defined for instance of {plugin.__name__}"
+                )
+
+        if isinstance(p, CutPlugin) or isinstance(p, CutList):
+            # this will make CutList.cuts to be invalid
+            new_plugin.dtype = np.dtype(
+                [
+                    ((d[0][0], d[0][1] + snake), d[1]) if d[0][1] not in ["time", "endtime"] else d
+                    for d in new_plugin.dtype.descr
+                ]
+            )
 
         new_plugins.append(new_plugin)
     return new_plugins
@@ -186,7 +213,7 @@ def _pair_to_context(self):
 @strax.Context.add_method
 def salt_to_context(st, assign_attributes=None, tqdm_disable=True):
     """Register the salted plugins to the context."""
-    st.register((EventBuilding,))
+    st.register((MainS1Trigger, MainS2Trigger, EventBuilding))
     st.replication_tree(
         suffixes=["Salted"], assign_attributes=assign_attributes, tqdm_disable=tqdm_disable
     )
@@ -196,7 +223,7 @@ def salt_to_context(st, assign_attributes=None, tqdm_disable=True):
 @strax.Context.add_method
 def salt_and_pair_to_context(st, assign_attributes=None, tqdm_disable=True):
     """Register the salted and paired plugins to the context."""
-    st.register((EventBuilding,))
+    st.register((MainS1Trigger, MainS2Trigger, EventBuilding))
     st.replication_tree(assign_attributes=assign_attributes, tqdm_disable=tqdm_disable)
     st._salt_to_context()
     st._pair_to_context()
