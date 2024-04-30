@@ -1,3 +1,4 @@
+import warnings
 from typing import Tuple
 import numpy as np
 import strax
@@ -20,6 +21,18 @@ class EventsSalted(Events, ExhaustPlugin):
         default=5,
         type=int,
         help="How many max drift time will the event builder extend",
+    )
+
+    only_salt_s1 = straxen.URLConfig(
+        default=False,
+        type=bool,
+        help="Whether only salt S1",
+    )
+
+    only_salt_s2 = straxen.URLConfig(
+        default=False,
+        type=bool,
+        help="Whether only salt S2",
     )
 
     def __init__(self):
@@ -59,19 +72,29 @@ class EventsSalted(Events, ExhaustPlugin):
 
         _peaks = merge_salted_real(peaks_salted, peaks, self._peaks_dtype)
 
-        # use S2s as anchors
-        anchor_peaks = peaks_salted[1::2]
+        if self.only_salt_s1 or self.only_salt_s2:
+            anchor_peaks = peaks_salted
+        else:
+            # use S2s as anchors by default
+            anchor_peaks = peaks_salted[1::2]
+
+        # check if the salting anchor can trigger
+        if self.only_salt_s1:
+            is_triggering = np.full(len(anchor_peaks), False)
+        else:
+            is_triggering = np.full(len(anchor_peaks), False)
+
         if np.unique(anchor_peaks["type"]).size != 1:
             raise ValueError("Expected only one type of anchor peaks!")
 
         # initial the final result
-        n_events = len(peaks_salted) // 2
+        if self.only_salt_s1 or self.only_salt_s2:
+            n_events = len(peaks_salted)
+        else:
+            n_events = len(peaks_salted) // 2
         if np.unique(peaks_salted["salt_number"]).size != n_events:
             raise ValueError("Expected salt_number to be half of the input peaks number!")
         result = np.empty(n_events, self.dtype)
-
-        # check if the salting anchor can trigger
-        is_triggering = self._is_triggering(anchor_peaks)
 
         # prepare for an empty event
         empty_events = np.empty(len(anchor_peaks), dtype=self.dtype)
@@ -102,8 +125,8 @@ class EventsSalted(Events, ExhaustPlugin):
 
         # assign the most important parameters
         result["is_triggering"] = is_triggering
-        result["salt_number"] = peaks_salted["salt_number"][::2]
-        result["event_number"] = peaks_salted["salt_number"][::2]
+        result["salt_number"] = np.unique(peaks_salted["salt_number"])
+        result["event_number"] = result["salt_number"]
 
         if np.any(np.diff(result["time"]) < 0):
             raise ValueError("Expected time to be sorted!")
@@ -170,6 +193,7 @@ class EventBasicsSalted(EventBasics, ExhaustPlugin):
         self.fill_events(result, events_salted, split_peaks)
         result["is_triggering"] = events_salted["is_triggering"]
 
-        if np.all(result["s1_salt_number"] < 0) or np.all(result["s2_salt_number"] < 0):
-            raise ValueError("Found zero triggered salted peaks!")
+        for i in [1, 2]:
+            if np.all(result[f"s{i}_salt_number"] < 0):
+                warnings.warn(f"Found zero triggered salted S{i}!")
         return result

@@ -190,6 +190,9 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
         self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
 
+        if np.any(np.diff(self.events_salting["time"]) <= 0):
+            raise ValueError("The time is not strictly increasing!")
+
         self.set_chunk_splitting()
 
     def compute(self, run_meta, start, end):
