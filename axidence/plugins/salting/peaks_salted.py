@@ -42,6 +42,11 @@ class PeaksSalted(PeakBasics):
         ]
         return dtype
 
+    def setup(self):
+        super().setup()
+        if self.only_salt_s1 and self.only_salt_s2:
+            raise ValueError("Cannot only salt both S1 and S2.")
+
     def compute(self, events_salting):
         """Copy features of events_salting into peaks_salted."""
         peaks_salted = np.empty(len(events_salting) * 2, dtype=self.dtype)
@@ -76,4 +81,10 @@ class PeaksSalted(PeakBasics):
             ]
         ).T.flatten()
         peaks_salted["salt_number"] = np.repeat(events_salting["salt_number"], 2)
+
+        # Filter out peaks that are not S1 or S2
+        if self.only_salt_s1:
+            peaks_salted = peaks_salted[peaks_salted["type"] == 1]
+        if self.only_salt_s2:
+            peaks_salted = peaks_salted[peaks_salted["type"] == 2]
         return peaks_salted

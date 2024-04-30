@@ -1,7 +1,6 @@
 import warnings
 from immutabledict import immutabledict
 import numpy as np
-from scipy.stats import poisson
 import strax
 from strax import Plugin, DownChunkingPlugin
 import straxen
@@ -109,6 +108,12 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=True,
         type=bool,
         help="Whether shift drift time when performing shadow matching",
+    )
+
+    only_salt_s1 = straxen.URLConfig(
+        default=False,
+        type=bool,
+        help="Whether only salt S1",
     )
 
     apply_shadow_reweight = straxen.URLConfig(
@@ -240,6 +245,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         """Select the reference events for shadow matching, also return
         weights."""
         reference = events_salted[events_salted["cut_main_s2_trigger_salted"]]
+
+        if self.only_salt_s1:
+            raise ValueError("Cannot only salt S1 when performing shadow matching!")
+
         if self.apply_shadow_reweight:
             sampler = SAMPLERS[self.s2_distribution](
                 self.s2_area_range, self.shadow_reweight_n_bins
@@ -248,6 +257,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         else:
             weight = np.ones(len(reference))
         weight /= weight.sum()
+
         if np.any(np.isnan(weight)):
             raise ValueError("Some weights are NaN!")
         dtype = np.dtype(
@@ -351,14 +361,12 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                     ],
                     n_partitions=[n_shadow_bins, n_shadow_bins],
                 )
-                if np.any(
-                    ge.apply_irregular_binning(
-                        data_sample=sampled_correlation,
-                        bin_edges=bin_edges,
-                        data_sample_weights=shadow_reference["weight"],
-                    )
-                    <= 0
-                ):
+                ns = ge.apply_irregular_binning(
+                    data_sample=sampled_correlation,
+                    bin_edges=bin_edges,
+                    data_sample_weights=shadow_reference["weight"],
+                )
+                if np.any(ns <= 0):
                     raise ValueError(
                         f"Weird! Find empty bin when the bin number is {n_shadow_bins}!"
                     )
@@ -414,15 +422,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _paring_rate_full[i] = ac_rate_conditional.sum()
             if not onlyrate:
                 # expectation of AC in each bin in this run
-                mu_shadow = ac_rate_conditional * run_time * paring_rate_bootstrap_factor
-                count_pairing = np.zeros_like(mu_shadow, dtype=int)
-                for ii in range(mu_shadow.shape[0]):
-                    for jj in range(mu_shadow.shape[1]):
-                        count_pairing[ii, jj] = poisson.rvs(mu=mu_shadow[ii, jj])
-                count_pairing = count_pairing.flatten()
-                # count_pairing = poisson.rvs(mu=mu_shadow).flatten()
+                lam_shadow = ac_rate_conditional * run_time * paring_rate_bootstrap_factor
+                count_pairing = rng.poisson(lam=lam_shadow).flatten()
                 if count_pairing.max() == 0:
-                    count_pairing[mu_shadow.argmax()] = 1
+                    count_pairing[lam_shadow.argmax()] = 1
                 s2_digit = PeaksPaired.digitize2d(data_sample, bin_edges, n_shadow_bins)
                 _s2_group_index = np.arange(len(s2))
                 s2_group_index_list = [
@@ -560,6 +563,12 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             peaks_arrays[peaks_count : peaks_count + len(_array)] = _array
             peaks_count += len(_array)
 
+        if peaks_count != len(peaks_arrays):
+            raise ValueError(
+                "Mismatch in total number of peaks in the chunk, "
+                f"expected {peaks_count}, got {len(peaks_arrays)}!"
+            )
+
         # assign truth
         truth_arrays = np.zeros(len(n_peaks), dtype=self.dtype["truth_paired"])
         truth_arrays["time"] = peaks_arrays["time"][
@@ -583,19 +592,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             <= peaks_arrays["endtime"][event_number_index[1:] - 1]
         ):
             raise ValueError("Some paired events overlap!")
-
-        peaks_arrays = np.sort(peaks_arrays, order=("time", "event_number"))
-
-        if peaks_count != len(peaks_arrays):
-            raise ValueError(
-                "Mismatch in total number of peaks in the chunk, "
-                f"expected {peaks_count}, got {len(peaks_arrays)}!"
-            )
-
-        # check overlap of peaks
-        n_overlap = (peaks_arrays["time"][1:] - peaks_arrays["endtime"][:-1] < 0).sum()
-        if n_overlap:
-            warnings.warn(f"{n_overlap} peaks overlap")
 
         return peaks_arrays, truth_arrays
 
@@ -712,6 +708,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 main_isolated_s2,
                 s2_group_index,
             )
+
             peaks_arrays["event_number"] += left_i
             truth_arrays["event_number"] += left_i
             peaks_arrays["normalization"] = np.repeat(
@@ -719,6 +716,14 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 n_peaks[left_i:right_i],
             )
             truth_arrays["normalization"] = normalization[left_i:right_i]
+
+            # becareful with all fields assignment after sorting
+            peaks_arrays = np.sort(peaks_arrays, order=("time", "event_number"))
+
+            # check overlap of peaks
+            n_overlap = (peaks_arrays["time"][1:] - peaks_arrays["endtime"][:-1] < 0).sum()
+            if n_overlap:
+                warnings.warn(f"{n_overlap} peaks overlap")
 
             result = dict()
             result["peaks_paired"] = self.chunk(
