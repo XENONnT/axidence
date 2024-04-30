@@ -1,12 +1,11 @@
 import numpy as np
 import strax
-from strax import DownChunkingPlugin
+from strax import ExhaustPlugin, DownChunkingPlugin
 import straxen
 from straxen import units, EventBasics, EventPositions
 
 from ...utils import copy_dtype
 from ...samplers import SAMPLERS
-from ...plugin import ExhaustPlugin
 
 
 class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
