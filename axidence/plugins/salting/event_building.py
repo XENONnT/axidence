@@ -2,11 +2,11 @@ import warnings
 from typing import Tuple
 import numpy as np
 import strax
+from strax import ExhaustPlugin
 import straxen
 from straxen import Events, EventBasics
 
 from ...utils import needed_dtype, merge_salted_real
-from ...plugin import ExhaustPlugin
 
 
 class EventsSalted(Events, ExhaustPlugin):

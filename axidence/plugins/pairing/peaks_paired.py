@@ -2,7 +2,7 @@ import warnings
 from immutabledict import immutabledict
 import numpy as np
 import strax
-from strax import Plugin, DownChunkingPlugin
+from strax import Plugin, ExhaustPlugin, DownChunkingPlugin
 import straxen
 from straxen import units
 from straxen import PeakProximity
@@ -11,7 +11,6 @@ import GOFevaluation as ge
 from ...utils import copy_dtype
 from ...samplers import SAMPLERS
 from ...dtypes import peak_positions_dtype
-from ...plugin import ExhaustPlugin
 
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
