@@ -18,7 +18,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     depends_on = (
         "isolated_s1",
         "isolated_s2",
-        "peak_shadow_salted",
+        "peaks_salted",
         "events_salted",
         "event_basics_salted",
         "event_shadow_salted",
