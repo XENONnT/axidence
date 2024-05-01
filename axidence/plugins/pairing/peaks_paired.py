@@ -18,6 +18,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     depends_on = (
         "isolated_s1",
         "isolated_s2",
+        "peak_shadow_salted",
         "events_salted",
         "event_basics_salted",
         "event_shadow_salted",
@@ -62,12 +63,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=30,
         type=int,
         help="Max bin number of 2D shadow matching",
-    )
-
-    isolated_s1_rate_correction = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether correct isolated S1 rate when calculating AC rate",
     )
 
     # multiple factor in simulation, e.g. AC rate is 1/t/y,
@@ -239,6 +234,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             s2["group_number"][s2_group_index],
             drift_time,
         )
+
+    def get_paring_rate_correction(self, peak_shadow_salted):
+        return 1
 
     def shadow_reference_selection(self, events_salted, s2):
         """Select the reference events for shadow matching, also return
@@ -594,7 +592,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, events_salted, start, end):
+    def compute(self, isolated_s1, isolated_s2, peak_shadow_salted, events_salted, start, end):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -604,10 +602,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # main S2s in isolated S2
         main_isolated_s2 = isolated_s2[s2_main_index]
 
-        if self.isolated_s1_rate_correction:
-            raise NotImplementedError("AC rate correction for isolated S1 is not implemented yet!")
-        else:
-            paring_rate_correction = 1
+        paring_rate_correction = self.get_paring_rate_correction(peak_shadow_salted)
         print(f"Isolated S1 correction factor is {paring_rate_correction:.3f}")
 
         run_time = (end - start) / units.s
