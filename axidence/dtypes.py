@@ -84,6 +84,7 @@ correlation_fields = (
 )
 
 event_level_fields = [
+    "n_peaks",
     "s1_center_time",
     "s2_center_time",
     "s1_area",

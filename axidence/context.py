@@ -2,8 +2,9 @@ from immutabledict import immutabledict
 from tqdm import tqdm
 import numpy as np
 import strax
-from strax import CutPlugin, CutList
+from strax import LoopPlugin, CutPlugin, CutList
 import straxen
+from straxen import EventBasics, EventInfoDouble
 
 from axidence import RunMeta, EventsSalting, PeaksSalted
 from axidence import (
@@ -37,6 +38,16 @@ from axidence import (
 )
 
 export, __all__ = strax.exporter()
+__all__.extend(["default_assign_attributes", "default_assign_appended_attributes"])
+
+
+default_assign_attributes = {
+    EventBasics: ["peak_properties", "posrec_save"],
+    EventInfoDouble: ["input_dtype"],
+}
+
+
+default_assign_appended_attributes: dict = {}
 
 
 @export
@@ -47,16 +58,32 @@ def ordinary_context(**kwargs):
 
 @export
 def assign_plugin_attributes(
-    new_plugin, old_plugin, old_instance, suffix, snake, assign_attributes=None
+    new_plugin,
+    old_plugin,
+    old_instance,
+    suffix,
+    snake,
+    assign_attributes=None,
+    assign_appended_attributes=None,
 ):
     # need to be compatible with strax.camel_to_snake
     # https://github.com/AxFoundation/strax/blob/7da9a2a6375e7614181830484b322389986cf064/strax/context.py#L324
     new_plugin.__name__ = old_plugin.__name__ + suffix
 
     # assign the attributes from the original plugin
-    if assign_attributes and old_plugin.__name__ in assign_attributes:
-        for attr in assign_attributes[old_plugin.__name__]:
-            setattr(new_plugin, attr, getattr(old_instance, attr))
+    if assign_attributes:
+        for k, v in assign_attributes.items():
+            if not issubclass(old_plugin, k):
+                continue
+            for attr in v:
+                setattr(new_plugin, attr, getattr(old_instance, attr))
+
+    if assign_appended_attributes:
+        for k, v in assign_appended_attributes.items():
+            if not issubclass(old_plugin, k):
+                continue
+            for attr in v:
+                setattr(new_plugin, attr, getattr(old_instance, attr) + snake)
 
     # assign the same attributes as the original plugin
     if hasattr(old_instance, "depends_on"):
@@ -93,6 +120,8 @@ def assign_plugin_attributes(
         new_plugin.dtype = dict(
             zip([k + snake for k in old_instance.dtype.keys()], old_instance.dtype.values())
         )
+        # some plugins like EventAreaPerChannel also uses self.dtype in compute
+        new_plugin.dtype.update(old_instance.dtype)
     else:
         new_plugin.dtype = old_instance.dtype
 
@@ -119,11 +148,32 @@ def assign_plugin_attributes(
             ]
         )
 
+    if hasattr(old_instance, "loop_over"):
+        new_plugin.loop_over = old_instance.loop_over + snake
+
     return new_plugin
 
 
+@export
+def keys_detach_suffix(kwargs, snake):
+    # remove the suffix from the keys
+    new_keys = [k.replace(snake, "") for k in kwargs.keys()]
+    new_kwargs = dict(zip(new_keys, kwargs.values()))
+    return new_kwargs
+
+
+@export
+def keys_attach_suffix(kwargs, snake):
+    # remove the suffix from the keys
+    new_keys = [k + snake for k in kwargs.keys()]
+    new_kwargs = dict(zip(new_keys, kwargs.values()))
+    return new_kwargs
+
+
 @strax.Context.add_method
-def plugin_factory(st, data_type, suffixes, assign_attributes=None):
+def plugin_factory(
+    st, data_type, suffixes, assign_attributes=None, assign_appended_attributes=None
+):
     """Create new plugins inheriting from the plugin which provides
     data_type."""
     plugin = st._plugin_class_registry[data_type]
@@ -144,14 +194,47 @@ def plugin_factory(st, data_type, suffixes, assign_attributes=None):
                 # so we assign the dtype manually and raise error in infer_dtype method
                 raise RuntimeError
 
-            def do_compute(self, chunk_i=None, **kwargs):
-                # remove the suffix from the keys
-                new_keys = [k.replace(self.suffix, "") for k in kwargs.keys()]
-                new_kwargs = dict(zip(new_keys, kwargs.values()))
-                return super().do_compute(chunk_i=chunk_i, **new_kwargs)
+            if not issubclass(plugin, LoopPlugin):
+
+                def _fix_output(self, result, start, end, _dtype=None):
+                    if self.multi_output and _dtype is None:
+                        result = keys_attach_suffix(result, self.suffix)
+                        return {
+                            d: super(plugin, self)._fix_output(result[d], start, end, _dtype=d)
+                            for d in self.provides
+                        }
+                    else:
+                        return super()._fix_output(result, start, end, _dtype=_dtype)
+
+                def do_compute(self, chunk_i=None, **kwargs):
+                    return super().do_compute(
+                        chunk_i=chunk_i, **keys_detach_suffix(kwargs, self.suffix)
+                    )
+
+            else:
+
+                def compute_loop(self, base_chunk, **kwargs):
+                    result = super().compute_loop(
+                        base_chunk, **keys_detach_suffix(kwargs, self.suffix)
+                    )
+                    if self.multi_output:
+                        return keys_attach_suffix(result, self.suffix)
+                    else:
+                        return result
+
+            if issubclass(plugin, CutPlugin):
+
+                def cut_by(self, **kwargs):
+                    return super().cut_by(**keys_detach_suffix(kwargs, self.suffix))
 
         new_plugin = assign_plugin_attributes(
-            new_plugin, plugin, p, suffix, snake, assign_attributes=assign_attributes
+            new_plugin,
+            plugin,
+            p,
+            suffix,
+            snake,
+            assign_attributes=assign_attributes,
+            assign_appended_attributes=assign_appended_attributes,
         )
 
         new_plugins.append(new_plugin)
@@ -159,16 +242,25 @@ def plugin_factory(st, data_type, suffixes, assign_attributes=None):
 
 
 @strax.Context.add_method
-def replication_tree(st, suffixes=["Paired", "Salted"], assign_attributes=None, tqdm_disable=True):
+def replication_tree(
+    st,
+    suffixes=["Paired", "Salted"],
+    assign_attributes=None,
+    assign_appended_attributes=None,
+    tqdm_disable=True,
+):
     """Replicate the dependency tree.
 
     The plugins in the new tree will have the suffixed depends_on,
     provides and data_kind as the plugins in original tree.
     """
+    # this is due to some features are assigned in `infer_dtype` of the original plugins:
+    # https://github.com/XENONnT/straxen/blob/e555c7dcada2743d2ea627ea49df783e9dba40e3/straxen/plugins/events/event_basics.py#L69
     if assign_attributes is None:
-        # this is due to some features are assigned in `infer_dtype` of the original plugins:
-        # https://github.com/XENONnT/straxen/blob/e555c7dcada2743d2ea627ea49df783e9dba40e3/straxen/plugins/events/event_basics.py#L69
-        assign_attributes = {"EventBasics": ["peak_properties", "posrec_save"]}
+        assign_attributes = default_assign_attributes
+
+    if assign_appended_attributes is None:
+        assign_appended_attributes = default_assign_appended_attributes
 
     snakes = ["_" + strax.camel_to_snake(suffix) for suffix in suffixes]
     for k in st._plugin_class_registry.keys():
@@ -177,7 +269,12 @@ def replication_tree(st, suffixes=["Paired", "Salted"], assign_attributes=None, 
                 raise ValueError(f"{k} with suffix {s} is already registered!")
     plugins_collection = []
     for k in tqdm(st._plugin_class_registry.keys(), disable=tqdm_disable):
-        plugins_collection += st.plugin_factory(k, suffixes, assign_attributes=assign_attributes)
+        plugins_collection += st.plugin_factory(
+            k,
+            suffixes,
+            assign_attributes=assign_attributes,
+            assign_appended_attributes=assign_appended_attributes,
+        )
 
     st.register(plugins_collection)
 
