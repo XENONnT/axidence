@@ -235,7 +235,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             drift_time,
         )
 
-    def get_paring_rate_correction(self, peak_shadow_salted):
+    def get_paring_rate_correction(self, peaks_salted):
         return 1
 
     def shadow_reference_selection(self, events_salted, s2):
@@ -592,7 +592,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, peak_shadow_salted, events_salted, start, end):
+    def compute(self, isolated_s1, isolated_s2, peaks_salted, events_salted, start, end):
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -602,7 +602,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # main S2s in isolated S2
         main_isolated_s2 = isolated_s2[s2_main_index]
 
-        paring_rate_correction = self.get_paring_rate_correction(peak_shadow_salted)
+        paring_rate_correction = self.get_paring_rate_correction(peaks_salted)
         print(f"Isolated S1 correction factor is {paring_rate_correction:.3f}")
 
         run_time = (end - start) / units.s
