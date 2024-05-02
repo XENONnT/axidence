@@ -41,6 +41,7 @@ class IsolatedS1(Plugin):
         dtype_reference = self.refer_dtype("peaks")
         dtype = copy_dtype(dtype_reference, self.isolated_peaks_fields)
         dtype += [
+            (("Run id", "run_id"), np.int32),
             (("Group number of peaks", "group_number"), np.int64),
         ]
         return dtype
@@ -49,9 +50,10 @@ class IsolatedS1(Plugin):
         _result = peaks[peaks["cut_isolated_s1"]]
         result = np.empty(len(_result), dtype=self.dtype)
         for n in result.dtype.names:
-            if n not in ["group_number"]:
+            if n not in ["run_id", "group_number"]:
                 result[n] = _result[n]
 
+        result["run_id"] = int(self.run_id)
         result["group_number"] = np.arange(len(result)) + self.groups_seen
 
         self.groups_seen += len(result)

@@ -56,6 +56,7 @@ class IsolatedS2(Plugin):
         dtype = copy_dtype(self.refer_dtype("peaks"), self.isolated_peaks_fields)
         dtype += copy_dtype(self.refer_dtype("events"), self.isolated_events_fields)
         dtype += [
+            (("Run id", "run_id"), np.int32),
             (("Group number of peaks", "group_number"), np.int64),
         ]
         return dtype
@@ -69,7 +70,7 @@ class IsolatedS2(Plugin):
 
         result = np.empty(_events["n_peaks"].sum(), dtype=self.dtype)
         for n in result.dtype.names:
-            if n not in ["group_number"]:
+            if n not in ["run_id", "group_number"]:
                 if n in self.isolated_peaks_fields:
                     result[n] = _peaks[n]
                 elif n in self.isolated_events_fields:
@@ -77,6 +78,7 @@ class IsolatedS2(Plugin):
                 else:
                     raise ValueError(f"Field {n} not found in peaks or events!")
 
+        result["run_id"] = int(self.run_id)
         result["group_number"] = (
             np.repeat(np.arange(len(_events)), _events["n_peaks"]) + self.groups_seen
         )

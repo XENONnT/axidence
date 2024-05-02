@@ -16,6 +16,7 @@ from ...dtypes import peak_positions_dtype
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     __version__ = "0.0.0"
     depends_on = (
+        "run_meta",
         "isolated_s1",
         "isolated_s2",
         "peaks_salted",
@@ -140,11 +141,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
     def infer_dtype(self):
         dtype = strax.unpack_dtype(self.deps["isolated_s1"].dtype_for("isolated_s1"))
-        # TODO: reconsider about how to store run_id after implementing super runs
         peaks_dtype = dtype + [
             # since event_number is int64 in event_basics
             (("Event number in this dataset", "event_number"), np.int64),
-            # (("Original run id", "origin_run_id"), np.int32),
+            (("Original run id", "origin_run_id"), np.int32),
             (("Original isolated S1/S2 group", "origin_group_number"), np.int32),
             (("Original time of peaks", "origin_time"), np.int64),
             (("Original endtime of peaks", "origin_endtime"), np.int64),
@@ -157,8 +157,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         ]
         truth_dtype = [
             (("Event number in this dataset", "event_number"), np.int64),
-            # (("Original run id of isolated S1", "s1_run_id"), np.int32),
-            # (("Original run id of isolated S2", "s2_run_id"), np.int32),
+            (("Original run id of isolated S1", "s1_run_id"), np.int32),
+            (("Original run id of isolated S2", "s2_run_id"), np.int32),
             (
                 ("Drift time between isolated S1 and main isolated S2 [ns]", "drift_time"),
                 np.float32,
@@ -189,6 +189,17 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             self.bootstrap_factor = list(self.paring_rate_bootstrap_factor)
         else:
             self.bootstrap_factor = [self.paring_rate_bootstrap_factor] * 2
+
+    @staticmethod
+    def update_group_number(isolated, run_meta):
+        result = isolated.copy()
+        windows = strax.touching_windows(isolated, run_meta)
+        n_groups = np.array(
+            [np.unique(isolated["group_number"][w[0] : w[1]]).size for w in windows]
+        )
+        cumsum = np.cumsum(np.hstack([[0], n_groups])[:-1])
+        result["group_number"] += np.repeat(cumsum, windows[:, 1] - windows[:, 0])
+        return result
 
     @staticmethod
     def preprocess_isolated_s2(s2):
@@ -514,7 +525,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             for q in self.dtype["peaks_paired"].names:
                 if "origin" not in q and q not in ["event_number", "normalization"]:
                     _array[0][q] = s1[s1_index][q]
-            # _array[0]["origin_run_id"] = s1["run_id"][s1_index]
+            _array[0]["origin_run_id"] = s1["run_id"][s1_index]
             _array[0]["origin_group_number"] = s1["group_number"][s1_index]
             _array[0]["origin_time"] = s1["time"][s1_index]
             _array[0]["origin_endtime"] = strax.endtime(s1)[s1_index]
@@ -533,7 +544,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 if "origin" not in q and q not in ["event_number", "normalization"]:
                     _array[1:][q] = s2_group_i[q]
             s2_index = s2_group_i["s2_index"]
-            # _array[1:]["origin_run_id"] = s2_group_i["run_id"]
+            _array[1:]["origin_run_id"] = s2_group_i["run_id"]
             _array[1:]["origin_group_number"] = s2_group_i["group_number"]
             _array[1:]["origin_time"] = s2_group_i["time"]
             _array[1:]["origin_endtime"] = strax.endtime(s2_group_i)
@@ -574,8 +585,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         ]
         truth_arrays["event_number"] = np.arange(len(n_peaks))
         truth_arrays["drift_time"] = drift_time
-        # truth_arrays["s1_run_id"] = s1["run_id"][s1_group_number]
-        # truth_arrays["s2_run_id"] = main_s2["run_id"][s2_group_number]
+        truth_arrays["s1_run_id"] = s1["run_id"][s1_group_number]
+        truth_arrays["s2_run_id"] = main_s2["run_id"][s2_group_number]
         truth_arrays["s1_group_number"] = s1["group_number"][s1_group_number]
         truth_arrays["s2_group_number"] = main_s2["group_number"][s2_group_number]
 
@@ -590,7 +601,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, isolated_s1, isolated_s2, peaks_salted, events_salted, start, end):
+    def compute(self, run_meta, isolated_s1, isolated_s2, peaks_salted, events_salted, start, end):
+        isolated_s1 = self.update_group_number(isolated_s1, run_meta)
+        isolated_s2 = self.update_group_number(isolated_s2, run_meta)
         for i, s in enumerate([isolated_s1, isolated_s2]):
             if np.any(np.diff(s["group_number"]) < 0):
                 raise ValueError(f"Group number is not sorted in isolated S{i}!")
@@ -603,7 +616,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         paring_rate_correction = self.get_paring_rate_correction(peaks_salted)
         print(f"Isolated S1 correction factor is {paring_rate_correction:.3f}")
 
-        run_time = (end - start) / units.s
+        run_time = (run_meta["endtime"] - run_meta["time"]).sum() / units.s
         s1_rate = len(isolated_s1) / run_time
         s2_rate = len(main_isolated_s2) / run_time
         print(f"There are {len(isolated_s1)} S1 peaks group")

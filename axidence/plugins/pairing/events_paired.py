@@ -85,9 +85,8 @@ class EventInfosPaired(Events):
             "left_dtime",
             "right_dtime",
         ]
-        # TODO: reconsider about how to store run_id after implementing super runs
         required_names += [
-            # "origin_run_id",
+            "origin_run_id",
             "origin_group_number",
             "origin_time",
             "origin_endtime",
