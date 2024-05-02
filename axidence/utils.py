@@ -35,17 +35,21 @@ def copy_dtype(dtype_reference, required_names):
 
 def needed_dtype(deps, dependencies_by_kind, func):
     # intersection depends_on's dtype.names will be needed in event building
-    needed_fields = func(
-        *tuple(
-            set.union(*tuple(set(deps[d].dtype_for(d).names) for d in dk))
-            for dk in dependencies_by_kind
-        )
-    )
-    dtype_reference = list(
+    needed_fields = sorted(
         func(
             *tuple(
-                set.union(*tuple(set(deps[d].dtype_for(d).descr) for d in dk))
+                set.union(*tuple(set(deps[d].dtype_for(d).names) for d in dk))
                 for dk in dependencies_by_kind
+            )
+        )
+    )
+    dtype_reference = sorted(
+        list(
+            func(
+                *tuple(
+                    set.union(*tuple(set(deps[d].dtype_for(d).descr) for d in dk))
+                    for dk in dependencies_by_kind
+                )
             )
         )
     )
