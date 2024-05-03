@@ -63,6 +63,9 @@ class IsolatedS2(Plugin):
 
     def compute(self, events, peaks):
         _events = events[events["cut_isolated_s2"]]
+        if len(_events) == 0:
+            return np.empty(0, dtype=self.dtype)
+
         split_peaks = strax.split_by_containment(peaks, _events)
         _peaks = np.hstack(split_peaks)
         if _events["n_peaks"].sum() != len(_peaks):
