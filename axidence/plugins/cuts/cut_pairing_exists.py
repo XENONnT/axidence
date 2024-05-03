@@ -13,6 +13,7 @@ class PairingExists(CutPlugin):
     cut_description = (
         "Whether isolated S2 influenced by pairing, and whether the event is considered as AC event"
     )
+    allow_hyperrun = True
 
     def cut_by(self, events_paired):
         return np.isin(events_paired["event_type"], [1, 3])
