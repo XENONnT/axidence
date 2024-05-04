@@ -9,7 +9,7 @@ from ...samplers import SAMPLERS
 
 
 class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
-    __version__ = "0.0.0"
+    __version__ = "0.0.1"
     child_plugin = True
     depends_on = "run_meta"
     provides = "events_salting"
@@ -23,9 +23,11 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     )
 
     salting_rate = straxen.URLConfig(
-        default=20,
-        type=(int, float),
-        help="Rate of salting in Hz",
+        default=10,
+        type=(int, float, list, tuple),
+        help=(
+            "Rate of salting in Hz, " "if list or tuple, they are the factor for 2 and 3+ hits S1",
+        ),
     )
 
     s1_area_range = straxen.URLConfig(
@@ -64,12 +66,6 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         help="Min time delay in [ns] for events towards the run end boundary",
     )
 
-    s1_n_hits_tight_coincidence = straxen.URLConfig(
-        default=2,
-        type=int,
-        help="Will assign the events's ``s1_n_hits`` and ``s1_tight_coincidence`` by this",
-    )
-
     n_drift_time_window = straxen.URLConfig(
         default=5,
         type=int,
@@ -104,6 +100,15 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
         self.init_rng()
 
+        if isinstance(self.salting_rate, (list, tuple)):
+            if len(self.salting_rate) != 2:
+                raise ValueError(
+                    "The length of salting_rate should be 2 " "if provided list or tuple!"
+                )
+            self.hits_salting_rate = list(self.salting_rate)
+        else:
+            self.hits_salting_rate = [self.salting_rate] * 2
+
     def init_rng(self):
         """Initialize the random number generator."""
         if self.salting_seed is None:
@@ -113,9 +118,9 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
     def sample_time(self, start, end):
         """Sample the time according to the start and end of the run."""
-        self.event_time_interval = int(units.s // self.salting_rate)
+        self.event_time_interval = int(units.s // sum(self.hits_salting_rate))
 
-        if units.s / self.salting_rate < self.drift_time_max * self.n_drift_time_window * 2:
+        if self.event_time_interval < self.drift_time_max * self.n_drift_time_window * 2:
             raise ValueError("Salting rate is too high according the drift time window!")
 
         time = np.arange(
@@ -153,8 +158,13 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.events_salting["time"] = time
         self.events_salting["endtime"] = time
 
-        self.events_salting["s1_n_hits"] = self.s1_n_hits_tight_coincidence
-        self.events_salting["s1_tight_coincidence"] = self.s1_n_hits_tight_coincidence
+        self.events_salting["s1_n_hits"] = 2
+        self.events_salting["s1_tight_coincidence"] = 2
+        n_3hits = round(self.n_events * self.hits_salting_rate[1] / sum(self.hits_salting_rate))
+        if n_3hits > 0:
+            indices = self.rng.choice(self.n_events, size=n_3hits, replace=False)
+            self.events_salting["s1_n_hits"][indices] = 3
+            self.events_salting["s1_tight_coincidence"][indices] = 3
 
         theta = self.rng.random(size=self.n_events) * 2 * np.pi - np.pi
         r = np.sqrt(self.rng.random(size=self.n_events)) * straxen.tpc_r
