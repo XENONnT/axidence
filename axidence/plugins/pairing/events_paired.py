@@ -11,7 +11,7 @@ export, __all__ = strax.exporter()
 
 class EventsForcePaired(OverlapWindowPlugin):
     """Mimicking Events Force manually pairing of isolated S1 & S2 Actually NOT
-    used in AC simulation, but just for debug."""
+    used in simulation, but just for debug."""
 
     depends_on = "peaks_paired"
     provides = "events_paired"
@@ -161,7 +161,7 @@ class EventInfosPaired(Events):
                     for n in self.peak_fields:
                         if n in self.alternative_peak_add_fields:
                             result[main_peak + n][i] = sp[n][idx]
-            # if the AC event have S2
+            # if the event have S2
             if event["s2_index"] != -1:
                 if sp["origin_s1_index"][0] == -1:
                     # if isolated S2 is pure-isolated S2(w/o main S1)

@@ -9,7 +9,7 @@ class PairingExists(CutPlugin):
     depends_on = "event_infos_paired"
     provides = "cut_pairing_exists"
     cut_name = "cut_pairing_exists"
-    data_kind = "event_paired"
+    data_kind = "events_paired"
     cut_description = (
         "Whether isolated S2 influenced by pairing, and whether the event is considered as AC event"
     )
