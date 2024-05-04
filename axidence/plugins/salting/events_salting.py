@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 import strax
 from strax import ExhaustPlugin, DownChunkingPlugin
 import straxen
@@ -50,7 +51,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
     s2_distribution = straxen.URLConfig(
         default="exponential",
-        type=str,
+        type=(str, list, tuple),
         help="S2 distribution shape in salting",
     )
 
@@ -149,6 +150,20 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.time_left = self.event_time_interval // 2
         self.time_right = self.event_time_interval - self.time_left
 
+    @staticmethod
+    def sample_area(distribution, area_range, n_events, rng):
+        """Sample the area according to the distribution."""
+        if isinstance(distribution, str):
+            area = SAMPLERS[distribution](area_range).sample(n_events, rng)
+        else:
+            if not all(isinstance(d, (list, tuple)) for d in distribution):
+                raise ValueError("Distribution should be (x_array, y_array) if not str!")
+            if distribution[0][0] != 0 or distribution[0][-1] != 1:
+                raise ValueError("The x_array of distribution should be normalized!")
+            cdf = rng.uniform(0, 1, size=n_events)
+            area = interp1d(distribution[0], distribution[1])(cdf)
+        return area
+
     def sampling(self, start, end):
         """Sample the features of events, (t, x, y, z, S1, S2) et al."""
         time = self.sample_time(start, end)
@@ -189,11 +204,11 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 
         s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
         s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
-        self.events_salting["s1_area"] = SAMPLERS[self.s1_distribution](s1_area_range).sample(
-            self.n_events, self.rng
+        self.events_salting["s1_area"] = self.sample_area(
+            self.s1_distribution, s1_area_range, self.n_events, self.rng
         )
-        self.events_salting["s2_area"] = SAMPLERS[self.s2_distribution](s2_area_range).sample(
-            self.n_events, self.rng
+        self.events_salting["s2_area"] = self.sample_area(
+            self.s2_distribution, s2_area_range, self.n_events, self.rng
         )
         # to prevent numerical errors
         self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)

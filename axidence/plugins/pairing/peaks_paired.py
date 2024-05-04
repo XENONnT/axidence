@@ -14,7 +14,7 @@ from ...dtypes import peak_positions_dtype
 
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
-    __version__ = "0.0.0"
+    __version__ = "0.0.1"
     depends_on = (
         "run_meta",
         "isolated_s1",
@@ -114,15 +114,21 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     )
 
     apply_shadow_reweight = straxen.URLConfig(
-        default=True,
+        default=False,
         type=bool,
-        help="Whether perform shadow reweight",
+        help="Whether perform shadow reweight when shadow reference selection",
     )
 
     shadow_reweight_n_bins = straxen.URLConfig(
         default=50,
         type=int,
-        help="Bin number of shadow reweight",
+        help="Bin number of shadow reweight when shadow reference selection",
+    )
+
+    apply_event_building = straxen.URLConfig(
+        default=False,
+        type=bool,
+        help="Whether event building is applied when shadow reference selection",
     )
 
     shadow_deltatime_exponent = straxen.URLConfig(
@@ -249,15 +255,21 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         )
 
     def get_paring_rate_correction(self, peaks_salted):
+        # need to use peak-level salting because
+        # main S1 of event-level salting might be contaminated
         return 1
 
     def shadow_reference_selection(self, events_salted, s2):
         """Select the reference events for shadow matching, also return
         weights."""
-        reference = events_salted[events_salted["cut_main_s2_trigger_salted"]]
 
         if self.only_salt_s1:
             raise ValueError("Cannot only salt S1 when performing shadow matching!")
+
+        if self.apply_event_building:
+            reference = events_salted[events_salted["cut_main_s2_trigger_salted"]]
+        else:
+            reference = events_salted.copy()
 
         if self.apply_shadow_reweight:
             sampler = SAMPLERS[self.s2_distribution](
