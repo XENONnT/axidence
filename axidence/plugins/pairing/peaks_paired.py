@@ -29,6 +29,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
     rechunk_on_save = immutabledict(zip(provides, [False, True]))
+    allow_hyperrun = True
 
     pairing_seed = straxen.URLConfig(
         default=None,
@@ -750,6 +751,7 @@ class PeakProximityPaired(PeakProximity):
     provides = "peak_proximity_paired"
     data_kind = "peaks_paired"
     save_when = strax.SaveWhen.EXPLICIT
+    allow_hyperrun = True
 
     use_origin_n_competing = straxen.URLConfig(
         default=False,
@@ -809,6 +811,7 @@ class PeakPositionsPaired(Plugin):
     depends_on = "peaks_paired"
     provides = "peak_positions_paired"
     save_when = strax.SaveWhen.EXPLICIT
+    allow_hyperrun = True
 
     def infer_dtype(self):
         return peak_positions_dtype()
