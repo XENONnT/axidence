@@ -66,13 +66,14 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         help="Max bin number of 2D shadow matching",
     )
 
-    # multiple factor in simulation, e.g. AC rate is 1/t/y,
-    # multiple factor is 100, then we will make 100 AC events
+    # multiple factor in simulation,
+    # e.g. if number of event is is 1 in the run, and multiple factor is 100,
+    # then we will make 100 events
     paring_rate_bootstrap_factor = straxen.URLConfig(
         default=1e2,
         type=(int, float, list, tuple),
         help=(
-            "Bootstrap factor for AC rate, "
+            "Bootstrap factor for pairing rate, "
             "if list or tuple, they are the factor for 2 and 3+ hits S1"
         ),
     )
@@ -420,7 +421,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             s2_shadow_count = ge.apply_irregular_binning(
                 data_sample=data_sample, bin_edges=bin_edges
             )
-            # conditional rate is AC rate in each (x, y) bin
+            # conditional rate is pairing rate in each (x, y) bin
             ac_rate_conditional = (
                 s1_shadow_count / shadow_run_time * s2_shadow_count / shadow_run_time
             )
@@ -429,7 +430,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             ac_rate_conditional /= paring_rate_correction
             _paring_rate_full[i] = ac_rate_conditional.sum()
             if not onlyrate:
-                # expectation of AC in each bin in this run
+                # expectation of pairing in each bin in this run
                 lam_shadow = ac_rate_conditional * run_time * paring_rate_bootstrap_factor
                 count_pairing = rng.poisson(lam=lam_shadow).flatten()
                 if count_pairing.max() == 0:
@@ -516,7 +517,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # total number of isolated S1 & S2 peaks
         peaks_arrays = np.zeros(n_peaks.sum(), dtype=self.dtype["peaks_paired"])
 
-        # assign features of sampled isolated S1 and S2 in AC events
+        # assign features of sampled isolated S1 and S2 in pairing events
         peaks_count = 0
         for i in range(len(n_peaks)):
             _array = np.zeros(n_peaks[i], dtype=self.dtype["peaks_paired"])
@@ -629,7 +630,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         for i, mask in enumerate(n_hits_masks):
             if mask.sum() != 0:
                 if self.apply_shadow_matching:
-                    # simulate AC's drift time bin by bin
+                    # simulate drift time bin by bin
                     shadow_reference = self.shadow_reference_selection(
                         events_salted, main_isolated_s2
                     )
@@ -684,8 +685,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             ]
         )
 
-        print(f"AC pairing rate is {paring_rate_full * 1e3:.3f}mHz")
-        print(f"AC event number is {len(drift_time)}")
+        print(f"Pairing rate is {paring_rate_full * 1e3:.3f}mHz")
+        print(f"Event number is {len(drift_time)}")
 
         # make sure events are not very long
         assert (s2_length.max() + drift_time.max()) * 5.0 < self.paring_time_interval
