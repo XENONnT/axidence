@@ -9,7 +9,6 @@ from straxen import PeakProximity
 import GOFevaluation as ge
 
 from ...utils import copy_dtype
-from ...samplers import SAMPLERS
 from ...dtypes import peak_positions_dtype
 
 
@@ -20,7 +19,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         "isolated_s1",
         "isolated_s2",
         "peaks_salted",
-        "events_salted",
+        "peak_shadow_salted",
         "event_basics_salted",
         "event_shadow_salted",
         "cut_main_s2_trigger_salted",
@@ -111,24 +110,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=False,
         type=bool,
         help="Whether only salt S1",
-    )
-
-    apply_shadow_reweight = straxen.URLConfig(
-        default=False,
-        type=bool,
-        help="Whether perform shadow reweight when shadow reference selection",
-    )
-
-    shadow_reweight_n_bins = straxen.URLConfig(
-        default=50,
-        type=int,
-        help="Bin number of shadow reweight when shadow reference selection",
-    )
-
-    apply_event_building = straxen.URLConfig(
-        default=False,
-        type=bool,
-        help="Whether event building is applied when shadow reference selection",
     )
 
     shadow_deltatime_exponent = straxen.URLConfig(
@@ -259,34 +240,22 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # main S1 of event-level salting might be contaminated
         return 1
 
-    def shadow_reference_selection(self, events_salted, s2):
+    def shadow_reference_selection(self, peaks_salted, events_salted, s2):
         """Select the reference events for shadow matching, also return
         weights."""
 
         if self.only_salt_s1:
             raise ValueError("Cannot only salt S1 when performing shadow matching!")
 
-        if self.apply_event_building:
-            reference = events_salted[events_salted["cut_main_s2_trigger_salted"]]
-        else:
-            reference = events_salted.copy()
-
-        if self.apply_shadow_reweight:
-            sampler = SAMPLERS[self.s2_distribution](
-                self.s2_area_range, self.shadow_reweight_n_bins
-            )
-            weight = sampler.reweight(reference["s2_area"], s2["s2_area"])
-        else:
-            weight = np.ones(len(reference))
+        reference = peaks_salted[peaks_salted["type"] == 2]
+        weight = np.ones(len(reference))
         weight /= weight.sum()
 
-        if np.any(np.isnan(weight)):
-            raise ValueError("Some weights are NaN!")
         dtype = np.dtype(
             [
-                ("s2_area", float),
-                ("s2_dt_s2_time_shadow", float),
-                ("s2_shadow_s2_time_shadow", float),
+                ("area", float),
+                ("dt_s2_time_shadow", float),
+                ("shadow_s2_time_shadow", float),
                 ("weight", float),
             ]
         )
@@ -296,7 +265,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 shadow_reference[n] = weight
             else:
                 shadow_reference[n] = reference[n]
-        return shadow_reference
+        return shadow_reference, ""
 
     @staticmethod
     def digitize2d(data_sample, bin_edges, n_bins):
@@ -344,6 +313,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         n_drift_time_bins=50,
         shadow_deltatime_exponent=-1.0,
         max_n_shadow_bins=30,
+        prefix="",
         onlyrate=False,
     ):
         if paring_rate_bootstrap_factor < 1.0:
@@ -357,7 +327,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # prepare the 2D space, x is log(S2/dt), y is (log(S2)**2+log(dt)**2)**0.5
         # because these 2 dimension is orthogonal
         sampled_correlation = preprocess_shadow(
-            shadow_reference, shadow_deltatime_exponent, prefix="s2_"
+            shadow_reference, shadow_deltatime_exponent, prefix=prefix
         )
         s1_sample = preprocess_shadow(s1, shadow_deltatime_exponent)
 
@@ -644,8 +614,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             if mask.sum() != 0:
                 if self.apply_shadow_matching:
                     # simulate drift time bin by bin
-                    shadow_reference = self.shadow_reference_selection(
-                        events_salted, main_isolated_s2
+                    shadow_reference, prefix = self.shadow_reference_selection(
+                        peaks_salted, events_salted, main_isolated_s2
                     )
                     truth = self.shadow_matching(
                         isolated_s1[mask],
@@ -662,6 +632,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                         self.n_drift_time_bins,
                         self.shadow_deltatime_exponent,
                         self.max_n_shadow_bins,
+                        prefix,
                     )
                 else:
                     truth = self.simple_pairing(
