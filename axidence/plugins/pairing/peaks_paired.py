@@ -465,7 +465,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     def split_chunks(self, n_peaks):
         # divide results into chunks
         # max peaks number in left_i chunk
-        max_in_chunk = round(self.chunk_target_size_mb * 1e6 / self.dtype["peaks_paired"].itemsize)
+        max_in_chunk = round(
+            0.9 * self.chunk_target_size_mb * 1e6 / self.dtype["peaks_paired"].itemsize
+        )
         _n_peaks = n_peaks.copy()
         if _n_peaks.max() > max_in_chunk:
             raise ValueError("Can not fit a single paired event in a chunk!")

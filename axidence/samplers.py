@@ -34,13 +34,14 @@ class Sampler:
             raise ValueError(f"n_bins must be int, not {type(self.n_bins)}, got {self.n_bins}!")
         return self.inverse_transform(np.linspace(*self.transform(self.interval), self.n_bins + 1))
 
-    def reweight(self, x, reference):
+    def reweight(self, x, reference, reference_weights=None):
         h_x = np.histogram(x, bins=self.bins)[0]
-        h_reference = np.histogram(reference, bins=self.bins)[0]
+        h_reference = np.histogram(reference, bins=self.bins, weights=reference_weights)[0]
         _weights = h_reference / h_x
+        indices = np.clip(np.digitize(x, self.bins) - 1, 0, len(self.bins) - 2)
         weights = np.where(
             (x > self.bins[0]) & (x < self.bins[-1]),
-            _weights[np.digitize(np.clip(x, self.bins[0], self.bins[-1]), self.bins) - 1],
+            _weights[indices],
             0.0,
         )
         return weights
