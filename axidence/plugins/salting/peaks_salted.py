@@ -7,7 +7,7 @@ from ...utils import copy_dtype
 
 
 class PeaksSalted(PeakBasics):
-    __version__ = "0.0.0"
+    __version__ = "0.0.1"
     child_plugin = True
     depends_on = "events_salting"
     provides = "peaks_salted"
@@ -32,7 +32,7 @@ class PeaksSalted(PeakBasics):
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
         required_names = ["time", "endtime", "center_time"]
-        required_names += ["area", "n_hits", "tight_coincidence", "type"]
+        required_names += ["area", "area_fraction_top", "n_hits", "tight_coincidence", "type"]
         dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [
@@ -67,7 +67,7 @@ class PeaksSalted(PeakBasics):
                     np.full(len(events_salting), -1),
                 ]
             ).T.flatten()
-        for n in "x y".split():
+        for n in "x y area_fraction_top".split():
             peaks_salted[n] = np.vstack(
                 [
                     np.full(len(events_salting), np.nan),
