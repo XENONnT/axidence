@@ -225,7 +225,9 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
 
         self.events_salting["s2_area_fraction_top"] = self.sample_area_fraction_top(
-            self.events_salting["s2_area"], self.events_salting["s2_x"], self.events_salting["s2_y"],
+            self.events_salting["s2_area"],
+            self.events_salting["s2_x"],
+            self.events_salting["s2_y"],
         )
 
         if np.any(np.diff(self.events_salting["time"]) <= 0):
