@@ -67,6 +67,12 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         help="Min time delay in [ns] for events towards the run end boundary",
     )
 
+    assigned_area_fraction_top = straxen.URLConfig(
+        default=1.0,
+        type=(int, float, None),
+        help="Assigned area fraction top for S2",
+    )
+
     n_drift_time_window = straxen.URLConfig(
         default=5,
         type=int,
@@ -89,6 +95,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         dtype_reference = self.refer_dtype()
         required_names = ["time", "endtime", "s1_center_time", "s2_center_time"]
         required_names += ["s1_area", "s2_area", "s1_n_hits", "s1_tight_coincidence"]
+        required_names += ["s2_area_fraction_top"]
         required_names += ["x", "y", "z", "drift_time", "s2_x", "s2_y", "z_naive"]
         dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
@@ -164,6 +171,9 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
             area = interp1d(distribution[0], distribution[1])(cdf)
         return area
 
+    def sample_area_fraction_top(self, s2_area, s2_x, s2_y):
+        return self.assigned_area_fraction_top
+
     def sampling(self, start, end):
         """Sample the features of events, (t, x, y, z, S1, S2) et al."""
         time = self.sample_time(start, end)
@@ -213,6 +223,12 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         # to prevent numerical errors
         self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
         self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
+
+        self.events_salting["s2_area_fraction_top"] = self.sample_area_fraction_top(
+            self.events_salting["s2_area"],
+            self.events_salting["s2_x"],
+            self.events_salting["s2_y"],
+        )
 
         if np.any(np.diff(self.events_salting["time"]) <= 0):
             raise ValueError("The time is not strictly increasing!")
