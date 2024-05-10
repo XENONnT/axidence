@@ -27,8 +27,8 @@ class MainS2Trigger(CutPlugin):
 
 class EventBuilding(CutList):
     __version__ = "0.0.0"
-    provides = "cut_event_building"
-    accumulated_cuts_string = "cut_event_building"
+    provides = "cuts_event_building"
+    accumulated_cuts_string = "cuts_event_building"
     cut_description = "Whether the salting S1 or S2 can be the main S1 or S2"
 
     cuts = (MainS1Trigger, MainS2Trigger)

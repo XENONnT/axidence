@@ -605,6 +605,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         run_time = (run_meta["endtime"] - run_meta["time"]).sum() / units.s
         s1_rate = len(isolated_s1) / run_time
         s2_rate = len(main_isolated_s2) / run_time
+        print(f"Total run time is {run_time:.2f}s")
         print(f"There are {len(isolated_s1)} S1 peaks group")
         print(f"S1 rate is {s1_rate:.3f}Hz")
         print(f"There are {len(main_isolated_s2)} S2 peaks group")
