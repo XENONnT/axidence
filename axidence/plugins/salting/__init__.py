@@ -12,3 +12,6 @@ from .event_building import *
 
 from . import event_fields
 from .event_fields import *
+
+from . import event_combine
+from .event_combine import *

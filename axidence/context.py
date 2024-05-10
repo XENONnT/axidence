@@ -21,6 +21,7 @@ from axidence import (
     EventAmbienceSalted,
     EventNearestTriggeringSalted,
     EventSEDensitySalted,
+    EventsCombine,
     MainS1Trigger,
     MainS2Trigger,
     EventBuilding,
@@ -304,6 +305,7 @@ def _salt_to_context(self):
             EventAmbienceSalted,
             EventNearestTriggeringSalted,
             EventSEDensitySalted,
+            EventsCombine,
         )
     )
 
