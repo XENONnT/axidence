@@ -20,9 +20,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         "isolated_s2",
         "peaks_salted",
         "peak_shadow_salted",
-        "event_basics_salted",
-        "event_shadow_salted",
-        "cut_main_s2_trigger_salted",
     )
     provides = ("peaks_paired", "truth_paired")
     data_kind = immutabledict(zip(provides, provides))
@@ -240,7 +237,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         # main S1 of event-level salting might be contaminated
         return 1
 
-    def shadow_reference_selection(self, peaks_salted, events_salted, s2):
+    def shadow_reference_selection(self, peaks_salted):
         """Select the reference events for shadow matching, also return
         weights."""
 
@@ -587,7 +584,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         return peaks_arrays, truth_arrays
 
-    def compute(self, run_meta, isolated_s1, isolated_s2, peaks_salted, events_salted, start, end):
+    def compute(self, run_meta, isolated_s1, isolated_s2, peaks_salted, start, end):
         isolated_s1 = self.update_group_number(isolated_s1, run_meta)
         isolated_s2 = self.update_group_number(isolated_s2, run_meta)
         for i, s in enumerate([isolated_s1, isolated_s2]):
@@ -617,9 +614,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             if mask.sum() != 0:
                 if self.apply_shadow_matching:
                     # simulate drift time bin by bin
-                    shadow_reference, prefix = self.shadow_reference_selection(
-                        peaks_salted, events_salted, main_isolated_s2
-                    )
+                    shadow_reference, prefix = self.shadow_reference_selection(peaks_salted)
                     truth = self.shadow_matching(
                         isolated_s1[mask],
                         main_isolated_s2,
