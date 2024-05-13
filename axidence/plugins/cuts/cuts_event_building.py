@@ -2,7 +2,7 @@ from strax import CutPlugin, CutList
 
 
 class MainS1Trigger(CutPlugin):
-    __version__ = "0.0.0"
+    __version__ = "0.1.0"
     depends_on = "event_basics"
     provides = "cut_main_s1_trigger"
     cut_name = "cut_main_s1_trigger"
@@ -14,7 +14,7 @@ class MainS1Trigger(CutPlugin):
 
 
 class MainS2Trigger(CutPlugin):
-    __version__ = "0.0.0"
+    __version__ = "0.1.0"
     depends_on = "event_basics"
     provides = "cut_main_s2_trigger"
     cut_name = "cut_main_s2_trigger"
