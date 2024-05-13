@@ -1,4 +1,5 @@
 from typing import Tuple
+import numpy as np
 import strax
 from strax import Plugin
 from straxen import EventShadow, EventAmbience, EventNearestTriggering, EventSEDensity
@@ -7,11 +8,15 @@ from ...utils import merge_salted_real
 
 
 class EventFieldsSalted(Plugin):
+    __version__ = "0.1.0"
     child_plugin = True
 
     def compute(self, events_salted, peaks_salted, peaks):
         _peaks = merge_salted_real(peaks_salted, peaks, peaks.dtype)
-        return super().compute(events_salted, _peaks)
+        _, index, counts = np.unique(events_salted["time"], return_index=True, return_counts=True)
+        _result = super().compute(events_salted[index], _peaks)
+        result = np.repeat(_result, counts)
+        return result
 
 
 class EventShadowSalted(EventFieldsSalted, EventShadow):

@@ -10,7 +10,7 @@ from ...utils import needed_dtype, merge_salted_real
 
 
 class EventsSalted(Events, ExhaustPlugin):
-    __version__ = "0.1.0"
+    __version__ = "0.2.0"
     child_plugin = True
     depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
     provides = "events_salted"
@@ -78,12 +78,6 @@ class EventsSalted(Events, ExhaustPlugin):
             # use S2s as anchors by default
             anchor_peaks = peaks_salted[1::2]
 
-        # check if the salting anchor can trigger
-        if self.only_salt_s1:
-            is_triggering = np.full(len(anchor_peaks), False)
-        else:
-            is_triggering = np.full(len(anchor_peaks), False)
-
         if np.unique(anchor_peaks["type"]).size != 1:
             raise ValueError("Expected only one type of anchor peaks!")
 
@@ -104,8 +98,10 @@ class EventsSalted(Events, ExhaustPlugin):
         # build events at once because if a messy environment
         # make the two anchor in the same event
         # it will be considered as event building failure later
-        events = super().compute(_peaks, start, end)
-        events = strax.split_touching_windows(events, anchor_peaks)
+        _events = super().compute(_peaks, start, end)
+        # touching_windows will return the indices of things repeatedly
+        # as long as the things and container are touched so the events here can be repeated
+        events = strax.split_touching_windows(_events, anchor_peaks)
 
         # there should be only one event near the anchor
         l_events = np.array([len(event) for event in events])
@@ -116,12 +112,22 @@ class EventsSalted(Events, ExhaustPlugin):
         _result = np.hstack(
             [events[i] if l_events[i] != 0 else empty_events[i] for i in range(n_events)]
         )
-        # this more fancy way will not be used
-        # _result = np.sort(np.hstack(events + [empty_events[l_events == 0]]), order="time")
+
+        # sanity checks
         if not np.all(np.diff(_result["time"]) >= 0):
             raise ValueError("Expected the result to be sorted!")
+        # some anchors are belonged to a same event
+        index = np.unique(_result["time"], return_index=True)[1]
+        if not np.all(_result["time"][index][1:] - _result["endtime"][index][:-1] >= 0):
+            raise ValueError("Expected the result to be non-overlapping!")
         for n in _result.dtype.names:
             result[n] = _result[n]
+
+        # check if the salting anchor can trigger
+        if self.only_salt_s1:
+            is_triggering = np.full(len(anchor_peaks), False)
+        else:
+            is_triggering = self._is_triggering(anchor_peaks)
 
         # assign the most important parameters
         result["is_triggering"] = is_triggering
@@ -134,7 +140,7 @@ class EventsSalted(Events, ExhaustPlugin):
 
 
 class EventBasicsSalted(EventBasics, ExhaustPlugin):
-    __version__ = "0.0.0"
+    __version__ = "0.1.0"
     child_plugin = True
     depends_on: Tuple[str, ...] = (
         "events_salted",
@@ -180,20 +186,27 @@ class EventBasicsSalted(EventBasics, ExhaustPlugin):
 
         _peaks = merge_salted_real(peaks_salted, peaks, self._peaks_dtype)
 
-        result = np.zeros(len(events_salted), dtype=self.dtype)
-        self.set_nan_defaults(result)
+        # we repeated events, so we need to get the unique events
+        # because the fully_contained_in function will only return the first container of the thing
+        _, index, counts = np.unique(events_salted["time"], return_index=True, return_counts=True)
 
-        split_peaks = strax.split_by_containment(_peaks, events_salted)
+        _result = np.zeros(len(index), dtype=self.dtype)
+        self.set_nan_defaults(_result)
 
-        result["time"] = events_salted["time"]
-        result["endtime"] = events_salted["endtime"]
-        result["salt_number"] = events_salted["salt_number"]
-        result["event_number"] = events_salted["event_number"]
+        split_peaks = strax.split_by_containment(_peaks, events_salted[index])
 
-        self.fill_events(result, events_salted, split_peaks)
-        result["is_triggering"] = events_salted["is_triggering"]
+        _result["time"] = events_salted["time"][index]
+        _result["endtime"] = events_salted["endtime"][index]
+
+        self.fill_events(_result, events_salted[index], split_peaks)
 
         for i in [1, 2]:
-            if np.all(result[f"s{i}_salt_number"] < 0):
+            if np.all(_result[f"s{i}_salt_number"] < 0):
                 warnings.warn(f"Found zero triggered salted S{i}!")
+
+        # recover the original event number
+        result = np.repeat(_result, counts)
+        result["is_triggering"] = events_salted["is_triggering"]
+        result["salt_number"] = events_salted["salt_number"]
+        result["event_number"] = events_salted["event_number"]
         return result
