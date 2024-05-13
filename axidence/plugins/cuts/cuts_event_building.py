@@ -9,7 +9,7 @@ class MainS1Trigger(CutPlugin):
     cut_description = "Whether the salting S1 can be the main S2"
 
     def cut_by(self, events):
-        mask = events["s1_salt_number"] >= 0
+        mask = events["s1_salt_number"] == events["salt_number"]
         return mask
 
 
@@ -21,7 +21,7 @@ class MainS2Trigger(CutPlugin):
     cut_description = "Whether the salting S2 can be the main S2"
 
     def cut_by(self, events):
-        mask = events["s2_salt_number"] >= 0
+        mask = events["s2_salt_number"] == events["salt_number"]
         return mask
 
 
