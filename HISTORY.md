@@ -1,3 +1,25 @@
+v0.3.0 / 2024-05-14
+-------------------
+* Move `ExhaustPlugin` to strax by @dachengx in https://github.com/XENONnT/axidence/pull/59
+* Separate `assign_plugin_attributes` for future usage by @dachengx in https://github.com/XENONnT/axidence/pull/60
+* Add `get_paring_rate_correction` to `PeaksPaired` by @dachengx in https://github.com/XENONnT/axidence/pull/61
+* Debug for attributes assignments by @dachengx in https://github.com/XENONnT/axidence/pull/62
+* Add `run_meta` as the dependency of `PeaksPaired` and store `run_id` into `peaks_paired` by @dachengx in https://github.com/XENONnT/axidence/pull/63
+* Sort `dtype_reference` to prevent dtype mismatch by @dachengx in https://github.com/XENONnT/axidence/pull/64
+* Bug fix when isolated S2 in input buffer is 0 by @dachengx in https://github.com/XENONnT/axidence/pull/66
+* Debug `data_kind` of `PairingExists` by @dachengx in https://github.com/XENONnT/axidence/pull/67
+* Implement Hyperruns by @dachengx in https://github.com/XENONnT/axidence/pull/65
+* Customized salting by @dachengx in https://github.com/XENONnT/axidence/pull/68
+* Make chunk size samller by @dachengx in https://github.com/XENONnT/axidence/pull/69
+* Simulate S2AFT by @dachengx in https://github.com/XENONnT/axidence/pull/70
+* Combine salted events and salting events by @dachengx in https://github.com/XENONnT/axidence/pull/71
+* Simplify `shadow_reference_selection` by @dachengx in https://github.com/XENONnT/axidence/pull/72
+* Slove the bug when salting peaks overlap by @dachengx in https://github.com/XENONnT/axidence/pull/73
+* Fix bug when triggering peak in an event is not from the salting peaks by @dachengx in https://github.com/XENONnT/axidence/pull/74
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.2.2...v0.3.0
+
+
 v0.2.2 / 2024-04-30
 -------------------
 * Add `PeakNearestTriggeringSalted` and `EventNearestTriggeringSalted` by @dachengx in https://github.com/dachengx/axidence/pull/47
