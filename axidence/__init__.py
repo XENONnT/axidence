@@ -7,8 +7,6 @@ from .utils import *
 
 from .samplers import *
 
-from .plugin import *
-
 from . import plugins
 from .plugins import *
 
