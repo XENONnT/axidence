@@ -1,7 +1,7 @@
 Axidence
 ========
 
-Github page: https://github.com/dachengx/axidence
+Github page: https://github.com/XENONnT/axidence
 
 Axidence is a strax-based data-driven accidental coincidence background simulation and peak-level salting framework.
 

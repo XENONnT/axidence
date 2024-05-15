@@ -19,7 +19,7 @@ Option 2: install from source code
 
 .. code-block:: console
 
-    git clone https://github.com/dachengx/axidence
+    git clone https://github.com/XENONnT/axidence
     cd axidence
 
 To install in your environment and in editable mode:

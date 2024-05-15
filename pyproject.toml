@@ -18,7 +18,7 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Physics",
 ]
-repository = "https://github.com/dachengx/axidence"
+repository = "https://github.com/XENONnT/axidence"
 documentation = "https://readthedocs.org/projects/axidence/"
 
 [tool.poetry.dependencies]

@@ -3,7 +3,7 @@
 #    python versions
 #  - Coveralls -> this is to see if we are covering all our lines of
 #    code with our tests. The results get uploaded to
-#    coveralls.io/github/dachengx/axidence
+#    coveralls.io/github/XENONnT/axidence
 #  - pytest_no_database -> we want to make sure we can run the tests even
 #    if we don't have access to our database since this will e.g. happen
 #    when someone is pushing a PR from their own fork as we don't
@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.9", "3.10" ]
-        test: [ "coveralls", "pytest" ]
+        test: [ "coveralls" ]
 
     steps:
       # Setup and installation
@@ -82,19 +82,11 @@ jobs:
         run: |
           pip install .
 
-      - name: Test package
-        # This is running a normal test
-        env:
-          TEST_MONGO_URI: 'mongodb://localhost:27017/'
-        run: |
-          coverage run --source=axidence -m pytest --durations 0
-          coverage report
-
-      - name: Coveralls
+      - name: Test package and report to coveralls
         # Make the coverage report and upload
         env:
+          TEST_MONGO_URI: 'mongodb://localhost:27017/'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: matrix.test == 'coveralls'
         run: |
           coverage run --source=axidence -m pytest --durations 0 -v
           coveralls --service=github
