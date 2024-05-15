@@ -6,3 +6,4 @@ strax_data
 resource_cache
 *.gv
 *.gv.svg
+strax_test_data

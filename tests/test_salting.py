@@ -1,39 +1,37 @@
-import os
-import uuid
-import shutil
-import tempfile
+import pytest
 from unittest import TestCase
-from straxen import units
-
-import axidence
+from straxen.test_utils import nt_test_context, nt_test_run_id
 
 
+@pytest.mark.usefixtures("rm_strax_data")
 class TestSalting(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        # Maybe keeping one temp dir is a bit overkill
-        temp_folder = uuid.uuid4().hex
-        cls.tempdir = os.path.join(tempfile.gettempdir(), temp_folder)
-        assert not os.path.exists(cls.tempdir)
-
-        cls.run_id = "0" * 6
-        cls.st = axidence.ordinary_context(output_folder=cls.tempdir)
+        cls.run_id = nt_test_run_id
+        cls.st = nt_test_context()
         cls.st.salt_to_context()
 
-        cls.st.set_config(
-            {
-                "real_run_start": 0,
-                "real_run_end": units.s * 10,
-            }
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        # Make sure to only cleanup this dir after we have done all the tests
-        if os.path.exists(cls.tempdir):
-            shutil.rmtree(cls.tempdir)
-
-    # def test_salting(self):
-    #     """Test the computing of events_salting and peaks_salted."""
-    #     self.st.make(self.run_id, "events_salting", save="events_salting")
-    #     self.st.make(self.run_id, "peaks_salted", save="peaks_salted")
+    def test_salting(self):
+        """Test the computing of salting plugins."""
+        peak_level_plugins = [
+            "peaks_salted",
+            "peak_proximity_salted",
+            "peak_shadow_salted",
+            "peak_ambience_salted",
+            "peak_nearest_triggering_salted",
+            "peak_se_density_salted",
+        ]
+        event_level_plugins = [
+            "events_salted",
+            "event_basics_salted",
+            "event_shadow_salted",
+            "event_ambience_salted",
+            "event_nearest_triggering_salted",
+            "event_se_density_salted",
+            "events_combine",
+            "cuts_event_building_salted",
+        ]
+        self.st.make(self.run_id, "run_meta", save="run_meta")
+        self.st.make(self.run_id, "events_salting", save="events_salting")
+        for p in peak_level_plugins + event_level_plugins:
+            self.st.make(self.run_id, p, save=p)
