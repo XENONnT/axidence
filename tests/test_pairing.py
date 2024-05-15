@@ -1,5 +1,6 @@
 import json
 from bson import json_util
+import pytest
 from unittest import TestCase
 import pandas as pd
 import strax
@@ -16,6 +17,7 @@ def _write_run_doc(context, run_id, storage, start, end):
         json.dump(run_doc, fp, sort_keys=True, indent=4, default=json_util.default)
 
 
+@pytest.mark.usefixtures("rm_strax_data")
 class TestPairing(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
