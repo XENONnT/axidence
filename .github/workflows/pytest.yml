@@ -74,6 +74,10 @@ jobs:
           SCADA_LOGIN_URL: ${{ secrets.SCADA_LOGIN_URL }}
           SCADA_PWD: ${{ secrets.SCADA_PWD }}
 
+      - name: Install requirements
+        run: |
+          pip install -r extra_requirements/requirements-tests.txt
+
       - name: Install Axidence
         run: |
           pip install .
