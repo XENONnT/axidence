@@ -67,6 +67,18 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         help="Min time delay in [ns] for events towards the run end boundary",
     )
 
+    min_drift_length = straxen.URLConfig(
+        default=0,
+        type=(int, float),
+        help="Manually set minimum length of drifting [cm]",
+    )
+
+    max_drift_length = straxen.URLConfig(
+        default=straxen.tpc_z,
+        infer_type=False,
+        help="Total length of the TPC from the bottom of gate to the top of cathode wires [cm]",
+    )
+
     assigned_area_fraction_top = straxen.URLConfig(
         default=1.0,
         type=(int, float, None),
@@ -195,7 +207,8 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         r = np.sqrt(self.rng.random(size=self.n_events)) * straxen.tpc_r
         self.events_salting["x"] = np.cos(theta) * r
         self.events_salting["y"] = np.sin(theta) * r
-        self.events_salting["z"] = -self.rng.random(size=self.n_events) * straxen.tpc_z
+        self.events_salting["z"] = -self.rng.random(size=self.n_events)
+        self.events_salting["z"] *= self.max_drift_length - self.min_drift_length
         s2_x, s2_y, z_naive = self.inverse_field_distortion(
             self.events_salting["x"],
             self.events_salting["y"],
