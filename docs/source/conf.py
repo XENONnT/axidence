@@ -53,6 +53,7 @@ def setup(app):
 
     this_dir = os.path.dirname(os.path.realpath(__file__))
     notes = os.path.join(this_dir, "..", "..", "HISTORY.md")
+    os.makedirs(os.path.join(this_dir, "reference"), exist_ok=True)
     target = os.path.join(this_dir, "reference", "release_notes.rst")
     pull_url = "https://github.com/XENONnT/axidence/pull"
 
