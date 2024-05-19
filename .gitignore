@@ -7,3 +7,6 @@ resource_cache
 *.gv
 *.gv.svg
 strax_test_data
+build
+docs/source/reference/*
+docs/source/reference/release_notes.rst
