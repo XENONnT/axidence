@@ -1,3 +1,14 @@
+v0.3.1 / 2024-05-27
+-------------------
+* Remove unused plugin by @dachengx in https://github.com/XENONnT/axidence/pull/76
+* Add more tests with real data by @dachengx in https://github.com/XENONnT/axidence/pull/77
+* Remove unnecessary duplicated tests by @dachengx in https://github.com/XENONnT/axidence/pull/78
+* Set minimum drift length of salted events by @dachengx in https://github.com/XENONnT/axidence/pull/79
+* Add structure of documentation by @dachengx in https://github.com/XENONnT/axidence/pull/80
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.0...v0.3.1
+
+
 v0.3.0 / 2024-05-14
 -------------------
 * Move `ExhaustPlugin` to strax by @dachengx in https://github.com/XENONnT/axidence/pull/59
