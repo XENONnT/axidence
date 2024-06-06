@@ -17,7 +17,7 @@ class IsolatedS2Mask(CutPlugin):
     cut_name = "cut_isolated_s2"
     data_kind = "events"
     cut_description = "Isolated S2 selection, a event-level cut."
-    save_when = SaveWhen.NEVER
+    save_when = SaveWhen.EXPLICIT
 
     isolated_s2_area_range = straxen.URLConfig(
         default=(trigger_min_area, 2e4),

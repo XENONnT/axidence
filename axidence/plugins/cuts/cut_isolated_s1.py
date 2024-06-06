@@ -10,7 +10,7 @@ class IsolatedS1Mask(CutPlugin):
     cut_name = "cut_isolated_s1"
     data_kind = "peaks"
     cut_description = "Isolated S1 selection, a peak-level cut."
-    save_when = SaveWhen.NEVER
+    save_when = SaveWhen.EXPLICIT
 
     isolated_s1_area_range = straxen.URLConfig(
         default=(1, 150),
