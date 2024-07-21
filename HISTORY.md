@@ -1,3 +1,10 @@
+v0.3.2 / 2024-07-22
+-------------------
+* Allow saving of isolated cut by @dachengx in https://github.com/XENONnT/axidence/pull/82
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.1...v0.3.2
+
+
 v0.3.1 / 2024-05-27
 -------------------
 * Remove unused plugin by @dachengx in https://github.com/XENONnT/axidence/pull/76
