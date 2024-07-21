@@ -1,5 +1,6 @@
 # Axidence
 
+[![DOI](https://zenodo.org/badge/786146724.svg)](https://zenodo.org/badge/latestdoi/786146724)
 [![Test package](https://github.com/XENONnT/axidence/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/XENONnT/axidence/actions/workflows/pytest.yml)
 [![Coverage Status](https://coveralls.io/repos/github/XENONnT/axidence/badge.svg?branch=main&kill_cache=1)](https://coveralls.io/github/XENONnT/axidence?branch=main&kill_cache=1)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/axidence.svg)](https://pypi.python.org/pypi/axidence/)
