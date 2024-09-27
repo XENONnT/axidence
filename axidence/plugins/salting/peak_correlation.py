@@ -1,7 +1,7 @@
 import numba
 import numpy as np
 import strax
-from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEDensity
+from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEScore
 
 from ...utils import copy_dtype
 
@@ -122,11 +122,11 @@ class PeakNearestTriggeringSalted(PeakNearestTriggering):
         return result
 
 
-class PeakSEDensitySalted(PeakSEDensity):
+class PeakSEScoreSalted(PeakSEScore):
     __version__ = "0.0.0"
     child_plugin = True
     depends_on = ("peaks_salted", "peak_basics", "peak_positions")
-    provides = "peak_se_density_salted"
+    provides = "peak_se_score_salted"
     data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
 
@@ -138,7 +138,7 @@ class PeakSEDensitySalted(PeakSEDensity):
         return dtype
 
     def compute(self, peaks_salted, peaks):
-        se_density = self.compute_se_density(peaks, peaks_salted)
+        se_score = self.compute_se_score(peaks, peaks_salted)
         return dict(
-            time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_density=se_density
+            time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_score=se_score
         )

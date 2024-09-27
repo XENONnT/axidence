@@ -17,7 +17,7 @@ class IsolatedS1(Plugin):
         "peak_proximity",
         "peak_shadow",
         "peak_ambience",
-        "peak_se_density",
+        "peak_se_score",
         "peak_nearest_triggering",
     )
     provides = "isolated_s1"
