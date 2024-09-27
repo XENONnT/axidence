@@ -67,7 +67,7 @@ class EventInfosPaired(Events):
     )
 
     alternative_peak_add_fields = straxen.URLConfig(
-        default=["se_density"],
+        default=["se_score"],
         type=(list, tuple),
         help="Fields to store also for alternative peaks",
     )
@@ -83,7 +83,7 @@ class EventInfosPaired(Events):
             "pdf_s2_position_shadow",
             "nearest_dt_s1",
             "nearest_dt_s2",
-            "se_density",
+            "se_score",
             "left_dtime",
             "right_dtime",
         ]
