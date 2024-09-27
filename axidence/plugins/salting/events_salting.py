@@ -10,7 +10,7 @@ from ...samplers import SAMPLERS
 
 
 class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
-    __version__ = "0.0.1"
+    __version__ = "0.0.2"
     child_plugin = True
     depends_on = "run_meta"
     provides = "events_salting"
