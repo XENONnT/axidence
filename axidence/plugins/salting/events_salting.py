@@ -207,8 +207,11 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         r = np.sqrt(self.rng.random(size=self.n_events)) * straxen.tpc_r
         self.events_salting["x"] = np.cos(theta) * r
         self.events_salting["y"] = np.sin(theta) * r
-        self.events_salting["z"] = -self.rng.random(size=self.n_events)
-        self.events_salting["z"] *= self.max_drift_length - self.min_drift_length
+        self.events_salting["z"] = self.rng.uniform(
+            low=-self.max_drift_length,
+            high=-self.min_drift_length,
+            size=self.n_events,
+        )
         s2_x, s2_y, z_naive = self.inverse_field_distortion(
             self.events_salting["x"],
             self.events_salting["y"],
