@@ -79,18 +79,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         default=2, type=int, help="Minimum tight coincidence necessary to make an S1"
     )
 
-    s2_area_range = straxen.URLConfig(
-        default=(1e2, 2e4),
-        type=(list, tuple),
-        help="Range of S2 area in salting",
-    )
-
-    s2_distribution = straxen.URLConfig(
-        default="exponential",
-        type=str,
-        help="S2 distribution shape in salting",
-    )
-
     apply_shadow_matching = straxen.URLConfig(
         default=True,
         type=bool,
