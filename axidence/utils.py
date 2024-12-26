@@ -65,10 +65,11 @@ def _pick_fields(field, peaks, peaks_dtype):
     if field in peaks.dtype.names:
         _field = peaks[field]
     else:
+        shape = (len(peaks),) + peaks_dtype[field].shape
         if np.issubdtype(peaks_dtype[field], np.integer):
-            _field = np.full(len(peaks), -1)
+            _field = np.full(shape, -1)
         else:
-            _field = np.full(len(peaks), np.nan)
+            _field = np.full(shape, np.nan)
     return _field
 
 
@@ -76,7 +77,7 @@ def merge_salted_real(peaks_salted, real_peaks, peaks_dtype):
     # combine peaks_salted and peaks
     _peaks = np.empty(len(peaks_salted) + len(real_peaks), dtype=peaks_dtype)
     for n in _peaks.dtype.names:
-        _peaks[n] = np.hstack(
+        _peaks[n] = np.concatenate(
             [_pick_fields(n, peaks_salted, peaks_dtype), _pick_fields(n, real_peaks, peaks_dtype)]
         )
     _peaks = np.sort(_peaks, order="time")
