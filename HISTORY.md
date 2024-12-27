@@ -1,3 +1,15 @@
+v0.3.3 / 2024-12-27
+-------------------
+* Poetry does not understand `requires-python` by @dachengx in https://github.com/XENONnT/axidence/pull/85
+* Lock version of strax(en) in the test by @dachengx in https://github.com/XENONnT/axidence/pull/88
+* Use SE scores instead of SE density by @dachengx in https://github.com/XENONnT/axidence/pull/87
+* Fix bug in z simulation by @dachengx in https://github.com/XENONnT/axidence/pull/90
+* Remove unused configs by @dachengx in https://github.com/XENONnT/axidence/pull/93
+* Compatible with multi-dimensional field by @dachengx in https://github.com/XENONnT/axidence/pull/94
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.2...v0.3.3
+
+
 v0.3.2 / 2024-07-22
 -------------------
 * Allow saving of isolated cut by @dachengx in https://github.com/XENONnT/axidence/pull/82

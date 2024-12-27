@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "axidence"
-version = "0.3.2"
+version = "0.3.3"
 description = "strax-based data-driven accidental coincidence background simulation and peak-level salting"
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -23,8 +23,8 @@ documentation = "https://readthedocs.org/projects/axidence/"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 strax = ">=1.6.3,<=1.6.5"
-straxen = { git = "https://github.com/XENONnT/straxen.git@sr1_leftovers"}
-GOFevaluation = ">=0.1.4"
+straxen = ">=2.2.6,<=2.2.7"
+GOFevaluation = ">=0.1.5"
 
 [build-system]
 requires = ["poetry-core>=1.0.8", "setuptools>=61.0"]
