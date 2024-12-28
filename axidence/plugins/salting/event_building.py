@@ -4,7 +4,7 @@ import numpy as np
 import strax
 from strax import ExhaustPlugin
 import straxen
-from straxen import Events, EventBasics
+from straxen import Events, EventBasicsSOM
 
 from ...utils import needed_dtype, merge_salted_real
 
@@ -139,7 +139,7 @@ class EventsSalted(Events, ExhaustPlugin):
         return result
 
 
-class EventBasicsSalted(EventBasics, ExhaustPlugin):
+class EventBasicsSOMSalted(EventBasicsSOM, ExhaustPlugin):
     __version__ = "0.1.0"
     child_plugin = True
     depends_on: Tuple[str, ...] = (
@@ -191,14 +191,14 @@ class EventBasicsSalted(EventBasics, ExhaustPlugin):
         _, index, counts = np.unique(events_salted["time"], return_index=True, return_counts=True)
 
         _result = np.zeros(len(index), dtype=self.dtype)
-        self.set_nan_defaults(_result)
+        strax.set_nan_defaults(_result)
 
         split_peaks = strax.split_by_containment(_peaks, events_salted[index])
 
         _result["time"] = events_salted["time"][index]
         _result["endtime"] = events_salted["endtime"][index]
 
-        self.fill_events(_result, events_salted[index], split_peaks)
+        self.fill_events(_result, split_peaks)
 
         for i in [1, 2]:
             if np.all(_result[f"s{i}_salt_number"] < 0):
