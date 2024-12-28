@@ -32,7 +32,7 @@ class TestPairing(TestCase):
         subrun_ids = [self.run_id]
         data_type = "event_basics"
         self.st.make(self.run_id, data_type, save=data_type)
-        meta = self.st.get_meta(self.run_id, data_type)
+        meta = self.st.get_metadata(self.run_id, data_type)
         self.st.storage[0] = strax.DataDirectory(self.st.storage[0].path, provide_run_metadata=True)
         _write_run_doc(
             self.st,
@@ -42,7 +42,7 @@ class TestPairing(TestCase):
             meta["end"],
         )
         self.st.define_run(hyperrun_name, subrun_ids)
-        self.st.check_hyperrun()
+        self.st.check_superrun()
         plugins = [
             "peaks_paired",
             "event_info_paired",

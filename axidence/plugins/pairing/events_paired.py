@@ -2,7 +2,7 @@ import numpy as np
 import strax
 from strax import OverlapWindowPlugin
 import straxen
-from straxen import Events, EventBasics
+from straxen import Events
 
 from ...utils import copy_dtype
 
@@ -133,7 +133,7 @@ class EventInfosPaired(Events):
         result = np.zeros(len(events_paired), dtype=self.dtype)
 
         # assign the additional fields
-        EventBasics.set_nan_defaults(result)
+        strax.set_nan_defaults(result)
 
         # assign the features already in EventInfo
         for q in self.deps["event_info_paired"].dtype_for("event_info_paired").names:
