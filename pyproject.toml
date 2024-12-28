@@ -23,7 +23,7 @@ documentation = "https://readthedocs.org/projects/axidence/"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 strax = ">=2.0.2"
-straxen = ">=3.0.1"
+straxen = { git = "https://github.com/XENONnT/straxen.git@master"}
 GOFevaluation = ">=0.1.5"
 
 [build-system]
