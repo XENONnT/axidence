@@ -47,6 +47,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest coverage coveralls
           pip install git+https://github.com/XENONnT/base_environment@el7.sr1_wimp_unblind --force-reinstall
+          pip install git+https://github.com/AxFoundation/strax.git@master --force-reinstall
+          pip install git+https://github.com/XENONnT/straxen.git@master --force-reinstall
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.10.0
