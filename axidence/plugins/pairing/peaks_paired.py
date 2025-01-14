@@ -370,6 +370,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                 _s1_group_index[s1_digit == xd].tolist()
                 for xd in range(n_shadow_bins * n_shadow_bins)
             ]
+            n_s1_group = np.array([len(s) for s in s1_group_index_list])
+            if np.any(n_s1_group != s1_shadow_count.flatten()):
+                raise ValueError("Mismatch in number of S1s in group!")
 
         drift_time_bins = np.linspace(min_drift_time, max_drift_time, n_drift_time_bins + 1)
         drift_time_bin_center = (drift_time_bins[:-1] + drift_time_bins[1:]) / 2
@@ -409,6 +412,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
                     _s2_group_index[s2_digit == xd].tolist()
                     for xd in range(n_shadow_bins * n_shadow_bins)
                 ]
+                n_s2_group = np.array([len(s) for s in s2_group_index_list])
+                if np.any(n_s2_group != s2_shadow_count.flatten()):
+                    raise ValueError("Mismatch in number of S2s in group!")
                 # random sample isolated S1 and S2's group number
                 _s1_group_index = np.hstack(
                     [
