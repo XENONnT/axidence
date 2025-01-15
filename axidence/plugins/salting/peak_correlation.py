@@ -28,9 +28,10 @@ class PeakProximitySalted(PeakProximity):
         return dtype
 
     def compute(self, peaks_salted, peaks):
-        windows = strax.touching_windows(peaks, peaks_salted, window=self.nearby_window)
+        mask = np.isin(peaks["type"], [1, 2])
+        windows = strax.touching_windows(peaks[mask], peaks_salted, window=self.nearby_window)
         n_left, n_tot = self.find_n_competing(
-            peaks, peaks_salted, windows, fraction=self.min_area_fraction
+            peaks[mask], peaks_salted, windows, fraction=self.min_area_fraction
         )
         return dict(
             time=peaks_salted["time"],
