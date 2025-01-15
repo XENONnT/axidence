@@ -28,7 +28,7 @@ class TestPairing(TestCase):
 
     def test_pairing(self):
         """Test the computing of pairing plugins."""
-        hyperrun_name = "__" + self.run_id
+        superrun_name = "_" + self.run_id
         subrun_ids = [self.run_id]
         data_type = "event_basics"
         self.st.make(self.run_id, data_type, save=data_type)
@@ -41,7 +41,7 @@ class TestPairing(TestCase):
             meta["start"],
             meta["end"],
         )
-        self.st.define_run(hyperrun_name, subrun_ids)
+        self.st.define_run(superrun_name, subrun_ids)
         self.st.check_superrun()
         plugins = [
             "peaks_paired",
