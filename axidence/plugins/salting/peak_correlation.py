@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 import strax
 from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEScore
@@ -40,24 +39,6 @@ class PeakProximitySalted(PeakProximity):
             n_competing_left=n_left,
             salt_number=peaks_salted["salt_number"],
         )
-
-    @staticmethod
-    @numba.jit(nopython=True, nogil=True, cache=True)
-    def find_n_competing(peaks, peaks_salted, windows, fraction):
-        n_left = np.zeros(len(peaks_salted), dtype=np.int32)
-        n_tot = n_left.copy()
-        areas = peaks["area"]
-        areas_salted = peaks_salted["area"]
-
-        dig = np.searchsorted(peaks["center_time"], peaks_salted["center_time"])
-
-        for i, peak in enumerate(peaks_salted):
-            left_i, right_i = windows[i]
-            threshold = areas_salted[i] * fraction
-            n_left[i] = np.sum(areas[left_i : dig[i]] > threshold)
-            n_tot[i] = n_left[i] + np.sum(areas[dig[i] : right_i] > threshold)
-
-        return n_left, n_tot
 
 
 class PeakShadowSalted(PeakShadow):
