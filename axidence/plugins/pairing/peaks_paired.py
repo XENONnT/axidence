@@ -261,7 +261,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             data_sample: array, data waiting for binning
         """
         digit = np.zeros(len(data_sample), dtype=int)
-        # `x_dig` is within [0, len(bin_edges[0])-1]
+        # `x_dig` is within [0, len(bin_edges[0]) - 1]
         x_dig = np.digitize(data_sample[:, 0], bin_edges[0][1:])
         for xd in np.unique(x_dig):
             digit[x_dig == xd] = (
