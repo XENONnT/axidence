@@ -24,7 +24,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     )
 
     salting_rate = straxen.URLConfig(
-        default=10,
+        default=20,
         type=(int, float, list, tuple),
         help=(
             "Rate of salting in Hz, " "if list or tuple, they are the factor for 2 and 3+ hits S1",

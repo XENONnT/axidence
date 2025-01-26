@@ -12,7 +12,10 @@ from ...utils import needed_dtype, merge_salted_real
 class EventsSalted(Events, ExhaustPlugin):
     __version__ = "0.2.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    depends_on = ("peaks_salted", "peak_proximity_salted", 
+                  "peak_basics", "peak_proximity",
+                  "peak_se_score", "peak_se_score_salted",
+                  "peak_shadow", "peak_shadow_salted")
     provides = "events_salted"
     data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
@@ -47,7 +50,6 @@ class EventsSalted(Events, ExhaustPlugin):
         self.needed_fields, self._peaks_dtype = needed_dtype(
             self.deps, self.dependencies_by_kind().values(), set.intersection
         )
-
         self.window = self.n_drift_time_window * self.drift_time_max
 
         if self.window < self.left_extension + self.right_extension:
@@ -94,10 +96,10 @@ class EventsSalted(Events, ExhaustPlugin):
         empty_events = np.empty(len(anchor_peaks), dtype=self.dtype)
         empty_events["time"] = anchor_peaks["time"]
         empty_events["endtime"] = anchor_peaks["endtime"]
-
         # build events at once because if a messy environment
         # make the two anchor in the same event
         # it will be considered as event building failure later
+        # import pdb; pdb.set_trace()
         _events = super().compute(_peaks, start, end)
         # touching_windows will return the indices of things repeatedly
         # as long as the things and container are touched so the events here can be repeated
@@ -149,6 +151,8 @@ class EventBasicsSalted(EventBasics, ExhaustPlugin):
         "peak_basics",
         "peak_proximity",
         "peak_positions",
+        "peak_se_score", "peak_se_score_salted",
+        "peak_shadow", "peak_shadow_salted"
     )
     provides = "event_basics_salted"
     data_kind = "events_salted"

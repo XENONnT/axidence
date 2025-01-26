@@ -6,7 +6,7 @@ class MainS1Trigger(CutPlugin):
     depends_on = "event_basics"
     provides = "cut_main_s1_trigger"
     cut_name = "cut_main_s1_trigger"
-    cut_description = "Whether the salting S1 can be the main S2"
+    cut_description = "Whether the salting S1 can be the main S1"
 
     def cut_by(self, events):
         mask = events["s1_salt_number"] == events["salt_number"]
