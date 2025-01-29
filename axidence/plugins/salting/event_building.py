@@ -5,6 +5,7 @@ import strax
 from strax import ExhaustPlugin
 import straxen
 from straxen import Events, EventBasicsSOM
+from straxen.plugins.defaults import NON_TRIGGERABLE_S1_TYPE, NON_TRIGGERABLE_S2_TYPE
 
 from ...utils import needed_dtype, merge_salted_real
 
@@ -83,7 +84,13 @@ class EventsSalted(Events, ExhaustPlugin):
             # use S2s as anchors by default
             anchor_peaks = peaks_salted[1::2]
 
-        if np.unique(anchor_peaks["type"]).size != 1:
+        wrong_type = (
+            np.unique(np.isin(anchor_peaks["type"], [1, NON_TRIGGERABLE_S1_TYPE])).size != 1
+        )
+        wrong_type |= (
+            np.unique(np.isin(anchor_peaks["type"], [2, NON_TRIGGERABLE_S2_TYPE])).size != 1
+        )
+        if wrong_type:
             raise ValueError("Expected only one type of anchor peaks!")
 
         # initial the final result
