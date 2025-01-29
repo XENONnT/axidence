@@ -4,6 +4,9 @@ from .events_salting import *
 from . import peaks_salted
 from .peaks_salted import *
 
+from . import triggerable_peaks_salted
+from .triggerable_peaks_salted import *
+
 from . import peak_correlation
 from .peak_correlation import *
 

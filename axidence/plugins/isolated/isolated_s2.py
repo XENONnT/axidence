@@ -17,7 +17,7 @@ class IsolatedS2(Plugin):
         "event_ambience",
         "event_pattern_fit",
         "peaks",
-        "peak_basics",
+        "triggerable_peak_basics",
         "peak_positions",
         "peak_proximity",
         "peak_shadow",

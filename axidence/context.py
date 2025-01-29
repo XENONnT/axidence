@@ -6,7 +6,7 @@ from strax import LoopPlugin, CutPlugin, CutList
 import straxen
 from straxen import EventBasicsSOM, EventInfoDouble
 
-from axidence import RunMeta, EventsSalting, PeaksSalted
+from axidence import RunMeta, EventsSalting, PeaksSalted, TriggerablePeaksSalted
 from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
@@ -298,6 +298,7 @@ def _salt_to_context(self):
             RunMeta,
             EventsSalting,
             PeaksSalted,
+            TriggerablePeaksSalted,
             PeakProximitySalted,
             PeakShadowSalted,
             PeakAmbienceSalted,

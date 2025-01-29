@@ -12,7 +12,12 @@ from ...utils import needed_dtype, merge_salted_real
 class EventsSalted(Events, ExhaustPlugin):
     __version__ = "0.2.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    depends_on = (
+        "triggerable_peaks_salted",
+        "peak_proximity_salted",
+        "triggerable_peak_basics",
+        "peak_proximity",
+    )
     provides = "events_salted"
     data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
@@ -144,9 +149,9 @@ class EventBasicsSOMSalted(EventBasicsSOM, ExhaustPlugin):
     child_plugin = True
     depends_on: Tuple[str, ...] = (
         "events_salted",
-        "peaks_salted",
+        "triggerable_peaks_salted",
         "peak_proximity_salted",
-        "peak_basics",
+        "triggerable_peak_basics",
         "peak_proximity",
         "peak_positions",
     )

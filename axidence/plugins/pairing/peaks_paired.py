@@ -18,7 +18,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         "run_meta",
         "isolated_s1",
         "isolated_s2",
-        "peaks_salted",
+        "triggerable_peaks_salted",
         "peak_shadow_salted",
     )
     provides = ("peaks_paired", "truth_paired")

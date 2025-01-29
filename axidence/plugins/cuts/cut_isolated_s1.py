@@ -5,7 +5,7 @@ import straxen
 
 class IsolatedS1Mask(CutPlugin):
     __version__ = "0.0.0"
-    depends_on = "peak_basics"
+    depends_on = "triggerable_peak_basics"
     provides = "cut_isolated_s1"
     cut_name = "cut_isolated_s1"
     data_kind = "peaks"

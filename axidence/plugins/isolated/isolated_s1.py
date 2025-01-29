@@ -12,7 +12,7 @@ class IsolatedS1(Plugin):
     depends_on = (
         "cut_isolated_s1",
         "peaks",
-        "peak_basics",
+        "triggerable_peak_basics",
         "peak_positions",
         "peak_proximity",
         "peak_shadow",
