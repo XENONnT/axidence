@@ -53,11 +53,12 @@ jobs:
 
       - name: Install requirements for Python 3.11
         if: matrix.python-version == '3.11'
-        run: pip install git+https://github.com/XENONnT/base_environment.git@master --force-reinstall
+        run: pip install git+https://github.com/XENONnT/base_environment.git --force-reinstall
 
       - name: Install strax and straxen
-          pip install git+https://github.com/AxFoundation/strax.git@master --force-reinstall
-          pip install git+https://github.com/XENONnT/straxen.git@master --force-reinstall
+        run: |
+          pip install git+https://github.com/AxFoundation/strax.git --force-reinstall
+          pip install git+https://github.com/XENONnT/straxen.git --force-reinstall
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.10.0
