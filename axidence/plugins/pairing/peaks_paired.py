@@ -13,7 +13,7 @@ from ...dtypes import peak_positions_dtype
 
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
-    __version__ = "0.0.1"
+    __version__ = "0.0.2"
     depends_on = (
         "run_meta",
         "isolated_s1",
@@ -447,11 +447,13 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             s2_group_index = np.hstack([group[1] for group in group_index_list]).astype(int)
             drift_time = np.hstack([group[2] for group in group_index_list]).astype(int)
             assert len(s1_group_index) == len(s2_group_index)
-        return paring_rate_full, (
-            s1["group_number"][s1_group_index],
-            s2["group_number"][s2_group_index],
-            drift_time,
-        )
+            return paring_rate_full, (
+                s1["group_number"][s1_group_index],
+                s2["group_number"][s2_group_index],
+                drift_time,
+            )
+        else:
+            return paring_rate_full
 
     def split_chunks(self, n_peaks):
         # divide results into chunks
@@ -509,6 +511,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[0]["origin_center_time"] = s1["center_time"][s1_index]
             _array[0]["origin_n_competing"] = s1["n_competing"][s1_index]
             _array[0]["origin_group_type"] = 1
+            _array[0]["center_time"] = s1_center_time[i]
             _array[0]["time"] = s1_center_time[i] - (
                 s1["center_time"][s1_index] - s1["time"][s1_index]
             )
@@ -528,6 +531,9 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[1:]["origin_center_time"] = s2_group_i["center_time"]
             _array[1:]["origin_n_competing"] = s2_group_i["n_competing"]
             _array[1:]["origin_group_type"] = 2
+            _array[1:]["center_time"] = s2_center_time[i] - (
+                s2_group_i["center_time"][s2_index] - s2_group_i["center_time"]
+            )
             _array[1:]["time"] = s2_center_time[i] - (
                 s2_group_i["center_time"][s2_index] - s2_group_i["time"]
             )
