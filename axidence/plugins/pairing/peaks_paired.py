@@ -13,7 +13,7 @@ from ...dtypes import peak_positions_dtype
 
 
 class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
-    __version__ = "0.0.1"
+    __version__ = "0.0.2"
     depends_on = (
         "run_meta",
         "isolated_s1",
