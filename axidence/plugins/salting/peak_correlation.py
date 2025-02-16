@@ -35,7 +35,8 @@ class PeakProximitySalted(PeakProximity):
         return dict(
             time=peaks_salted["time"],
             endtime=strax.endtime(peaks_salted),
-            n_competing=n_tot,
+            # here the plus one accounts for the peak itself
+            n_competing=n_tot + 1,
             n_competing_left=n_left,
             salt_number=peaks_salted["salt_number"],
         )
