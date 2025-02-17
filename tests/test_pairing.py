@@ -22,7 +22,8 @@ class TestPairing(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.run_id = nt_test_run_id
-        cls.st = nt_test_context()
+        # TODO: xenonnt_online should be used here
+        cls.st = nt_test_context("xenonnt")
         cls.st.set_context_config({"write_superruns": True})
         cls.st.salt_and_pair_to_context()
 
