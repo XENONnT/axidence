@@ -87,7 +87,14 @@ class PeakAmbienceSalted(PeakAmbience):
 class PeakNearestTriggeringSalted(PeakNearestTriggering):
     __version__ = "0.0.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    depends_on = (
+        "peaks_salted",
+        "peak_proximity_salted",
+        "peak_ambience__salted",
+        "peak_basics",
+        "peak_proximity",
+        "peak_ambience_",
+    )
     provides = "peak_nearest_triggering_salted"
     data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
