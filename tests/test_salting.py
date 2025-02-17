@@ -8,7 +8,8 @@ class TestSalting(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.run_id = nt_test_run_id
-        cls.st = nt_test_context()
+        # TODO: xenonnt_online should be used here
+        cls.st = nt_test_context("xenonnt")
         cls.st.salt_to_context()
 
     def test_salting(self):
