@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 import strax
 from strax import Plugin
-from straxen import EventShadow, EventAmbience, EventNearestTriggering, EventSEScore
+from straxen import EventShadow, EventAmbience #EventSEScore, EventNearestTriggering
 
 from ...utils import merge_salted_real
 
@@ -47,29 +47,29 @@ class EventAmbienceSalted(EventFieldsSalted, EventAmbience):
     save_when = strax.SaveWhen.EXPLICIT
 
 
-class EventNearestTriggeringSalted(EventFieldsSalted, EventNearestTriggering):
-    __version__ = "0.0.0"
-    depends_on = (
-        "event_basics_salted",
-        "peaks_salted",
-        "peak_nearest_triggering_salted",
-        "peak_basics",
-        "peak_nearest_triggering",
-    )
-    provides = "event_nearest_triggering_salted"
-    data_kind = "events_salted"
-    save_when = strax.SaveWhen.EXPLICIT
+# class EventNearestTriggeringSalted(EventFieldsSalted, EventNearestTriggering):
+#     __version__ = "0.0.0"
+#     depends_on = (
+#         "event_basics_salted",
+#         "peaks_salted",
+#         "peak_nearest_triggering_salted",
+#         "peak_basics",
+#         "peak_nearest_triggering",
+#     )
+#     provides = "event_nearest_triggering_salted"
+#     data_kind = "events_salted"
+#     save_when = strax.SaveWhen.EXPLICIT
 
 
-class EventSEScoreSalted(EventFieldsSalted, EventSEScore):
-    __version__ = "0.0.0"
-    depends_on: Tuple[str, ...] = (
-        "event_basics_salted",
-        "peaks_salted",
-        "peak_se_score_salted",
-        "peak_basics",
-        "peak_se_score",
-    )
-    provides = "event_se_score_salted"
-    data_kind = "events_salted"
-    save_when = strax.SaveWhen.EXPLICIT
+# class EventSEScoreSalted(EventFieldsSalted, EventSEScore):
+#     __version__ = "0.0.0"
+#     depends_on: Tuple[str, ...] = (
+#         "event_basics_salted",
+#         "peaks_salted",
+#         "peak_se_score_salted",
+#         "peak_basics",
+#         "peak_se_score",
+#     )
+#     provides = "event_se_score_salted"
+#     data_kind = "events_salted"
+#     save_when = strax.SaveWhen.EXPLICIT

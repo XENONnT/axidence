@@ -27,7 +27,7 @@ class PeaksSalted(PeakBasics):
     )
 
     def refer_dtype(self):
-        return strax.unpack_dtype(strax.to_numpy_dtype(super(PeaksSalted, self).infer_dtype()))
+        return strax.unpack_dtype(strax.to_numpy_dtype(super(PeaksSalted, self).dtype))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()

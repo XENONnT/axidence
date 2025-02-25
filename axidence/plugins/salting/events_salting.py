@@ -2,6 +2,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 import strax
 from strax import ExhaustPlugin, DownChunkingPlugin
+# from ..exhaust_plugin import ExhaustPlugin
+# from ..down_chunking_plugin import DownChunkingPlugin
 import straxen
 from straxen import units, EventBasics, EventPositions
 
@@ -99,7 +101,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         return strax.merged_dtype(
             [
                 strax.to_numpy_dtype(super(EventPositions, self).infer_dtype()),
-                strax.to_numpy_dtype(super(EventsSalting, self).infer_dtype()),
+                strax.to_numpy_dtype(super(EventsSalting, self).dtype),
             ]
         )
 

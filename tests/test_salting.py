@@ -18,16 +18,16 @@ class TestSalting(TestCase):
             "peak_proximity_salted",
             "peak_shadow_salted",
             "peak_ambience_salted",
-            "peak_nearest_triggering_salted",
-            "peak_se_score_salted",
+            # "peak_nearest_triggering_salted",
+            # "peak_se_score_salted",
         ]
         event_level_plugins = [
             "events_salted",
             "event_basics_salted",
             "event_shadow_salted",
             "event_ambience_salted",
-            "event_nearest_triggering_salted",
-            "event_se_score_salted",
+            # "event_nearest_triggering_salted",
+            # "event_se_score_salted",
             "events_combine",
             "cuts_event_building_salted",
         ]

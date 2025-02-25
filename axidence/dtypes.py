@@ -1,28 +1,31 @@
+import copy
 import numpy as np
 import strax
 import straxen
 
-from straxen.misc import kind_colors
+#from straxen.misc import kind_colors
 
 
-kind_colors.update(
-    {
-        "run_meta": "#ffff00",
-        "events_salting": "#0080ff",
-        "peaks_salted": "#00c0ff",
-        "events_salted": "#00ffff",
-        "peaks_paired": "#ff00ff",
-        "truth_paired": "#ff00ff",
-        "events_paired": "#ffccff",
-        "isolated_s1": "#80ff00",
-        "isolated_s2": "#80ff00",
-    }
-)
+#kind_colors.update(
+#    {
+#        "run_meta": "#ffff00",
+#        "events_salting": "#0080ff",
+#        "peaks_salted": "#00c0ff",
+#        "events_salted": "#00ffff",
+#        "peaks_paired": "#ff00ff",
+#        "truth_paired": "#ff00ff",
+#        "events_paired": "#ffccff",
+#        "isolated_s1": "#80ff00",
+#        "isolated_s2": "#80ff00",
+#    }
+#)
 
 
 def peak_positions_dtype():
+    opts = copy.copy(straxen.contexts.xnt_common_opts)
+    opts["register"] = opts["register"] + [straxen.plugins.DAQReader]
     st = strax.Context(
-        config=straxen.contexts.xnt_common_config, **straxen.contexts.xnt_common_opts
+        config=straxen.contexts.xnt_common_config, **opts
     )
     data_name = "peak_positions"
     PeakPositionsNT0 = st._get_plugins((data_name,), "0")[data_name]

@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 import strax
 from strax import ExhaustPlugin
+# from ..exhaust_plugin import ExhaustPlugin
 import straxen
 from straxen import Events, EventBasics
 
@@ -127,7 +128,17 @@ class EventsSalted(Events, ExhaustPlugin):
         if self.only_salt_s1:
             is_triggering = np.full(len(anchor_peaks), False)
         else:
-            is_triggering = self._is_triggering(anchor_peaks)
+            # Comes from straxen v1.7.1 event_processing.py L99-L107
+            _is_triggering = anchor_peaks['area'] > self.config['trigger_min_area']
+            _is_triggering &= (anchor_peaks['n_competing'] <= self.config['trigger_max_competing'])
+            if self.config['exclude_s1_as_triggering_peaks']:
+                _is_triggering &= anchor_peaks['type'] == 2
+            else:
+                is_not_s1 = anchor_peaks['type'] != 1
+                has_tc_large_enough = (anchor_peaks['tight_coincidence']
+                                    >= self.config['event_s1_min_coincidence'])
+                _is_triggering &= (is_not_s1 | has_tc_large_enough)
+            is_triggering = _is_triggering
 
         # assign the most important parameters
         result["is_triggering"] = is_triggering

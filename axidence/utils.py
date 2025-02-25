@@ -1,4 +1,22 @@
 import numpy as np
+import numexpr
+
+
+def parse_selection(x, selection):
+    """Parse a selection string into a mask that can be used to filter data.
+
+    :param selection: Query string, sequence of strings, or simple function to apply.
+    :return: Boolean indicating the selected items.
+
+    """
+    if hasattr(selection, "__call__"):
+        mask = selection(x)
+    else:
+        if isinstance(selection, (list, tuple)):
+            selection = " & ".join(f"({x})" for x in selection)
+
+        mask = numexpr.evaluate(selection, local_dict={fn: x[fn] for fn in x.dtype.names})
+    return mask
 
 
 def copy_dtype(dtype_reference, required_names):

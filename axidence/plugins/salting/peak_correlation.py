@@ -1,7 +1,7 @@
 import numba
 import numpy as np
 import strax
-from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEScore
+from straxen import PeakProximity, PeakShadow, PeakAmbience #PeakSEScore, PeakNearestTriggering
 
 from ...utils import copy_dtype
 
@@ -101,44 +101,44 @@ class PeakAmbienceSalted(PeakAmbience):
         return result
 
 
-class PeakNearestTriggeringSalted(PeakNearestTriggering):
-    __version__ = "0.0.0"
-    child_plugin = True
-    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
-    provides = "peak_nearest_triggering_salted"
-    data_kind = "peaks_salted"
-    save_when = strax.SaveWhen.EXPLICIT
+# class PeakNearestTriggeringSalted(PeakNearestTriggering):
+#     __version__ = "0.0.0"
+#     child_plugin = True
+#     depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+#     provides = "peak_nearest_triggering_salted"
+#     data_kind = "peaks_salted"
+#     save_when = strax.SaveWhen.EXPLICIT
 
-    def infer_dtype(self):
-        dtype = super().infer_dtype()
-        dtype += [
-            (("Salting number of peaks", "salt_number"), np.int64),
-        ]
-        return dtype
+#     def infer_dtype(self):
+#         dtype = super().infer_dtype()
+#         dtype += [
+#             (("Salting number of peaks", "salt_number"), np.int64),
+#         ]
+#         return dtype
 
-    def compute(self, peaks_salted, peaks):
-        result = self.compute_triggering(peaks, peaks_salted)
-        result["salt_number"] = peaks_salted["salt_number"]
-        return result
+#     def compute(self, peaks_salted, peaks):
+#         result = self.compute_triggering(peaks, peaks_salted)
+#         result["salt_number"] = peaks_salted["salt_number"]
+#         return result
 
 
-class PeakSEScoreSalted(PeakSEScore):
-    __version__ = "0.0.0"
-    child_plugin = True
-    depends_on = ("peaks_salted", "peak_basics", "peak_positions")
-    provides = "peak_se_score_salted"
-    data_kind = "peaks_salted"
-    save_when = strax.SaveWhen.EXPLICIT
+# class PeakSEScoreSalted(PeakSEScore):
+#     __version__ = "0.0.0"
+#     child_plugin = True
+#     depends_on = ("peaks_salted", "peak_basics", "peak_positions")
+#     provides = "peak_se_score_salted"
+#     data_kind = "peaks_salted"
+#     save_when = strax.SaveWhen.EXPLICIT
 
-    def infer_dtype(self):
-        dtype = super().infer_dtype()
-        dtype += [
-            (("Salting number of peaks", "salt_number"), np.int64),
-        ]
-        return dtype
+#     def infer_dtype(self):
+#         dtype = super().infer_dtype()
+#         dtype += [
+#             (("Salting number of peaks", "salt_number"), np.int64),
+#         ]
+#         return dtype
 
-    def compute(self, peaks_salted, peaks):
-        se_score = self.compute_se_score(peaks, peaks_salted)
-        return dict(
-            time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_score=se_score
-        )
+#     def compute(self, peaks_salted, peaks):
+#         se_score = self.compute_se_score(peaks, peaks_salted)
+#         return dict(
+#             time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_score=se_score
+#         )

@@ -2,7 +2,9 @@ from immutabledict import immutabledict
 from tqdm import tqdm
 import numpy as np
 import strax
-from strax import LoopPlugin, CutPlugin, CutList
+# from .plugins.cut_plugin import CutPlugin, CutList
+# from .plugins.loop_plugin import LoopPlugin
+from strax import CutPlugin, CutList, LoopPlugin, MergeOnlyPlugin
 import straxen
 from straxen import EventBasics, EventInfoDouble
 
@@ -11,16 +13,16 @@ from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
     PeakAmbienceSalted,
-    PeakNearestTriggeringSalted,
-    PeakSEScoreSalted,
+    # PeakNearestTriggeringSalted,
+    # PeakSEScoreSalted,
 )
 from axidence import (
     EventsSalted,
     EventBasicsSalted,
     EventShadowSalted,
     EventAmbienceSalted,
-    EventNearestTriggeringSalted,
-    EventSEScoreSalted,
+    # EventNearestTriggeringSalted,
+    # EventSEScoreSalted,
     EventsCombine,
     MainS1Trigger,
     MainS2Trigger,
@@ -170,6 +172,24 @@ def keys_detach_suffix(kwargs, snake):
 
 
 @export
+def values_detach_suffix(kwargs, snake):
+    new_values = [data_detach_suffix(value, snake) for value in kwargs.values()]
+    new_kwargs = dict(zip(kwargs.keys(), new_values))
+    return new_kwargs
+
+@export
+def data_detach_suffix(data, snake):
+    new_names = tuple(name.replace(snake, "") if name.startswith("cut") and name.endswith(snake) else name for name in data.dtype.names)
+    new_dtype = np.dtype([(new_name, data.dtype[name]) for new_name, name in zip(new_names, data.dtype.names)])
+    new_data = np.zeros(data.shape, dtype=new_dtype)
+
+    for old_name, new_name in zip(data.dtype.names, new_dtype.names):
+        new_data[new_name] = data[old_name]
+    
+    return new_data
+
+
+@export
 def keys_attach_suffix(kwargs, snake):
     # remove the suffix from the keys
     new_keys = [k + snake for k in kwargs.keys()]
@@ -186,20 +206,24 @@ def plugin_factory(
     plugin = st._plugin_class_registry[data_type]
 
     new_plugins = []
-    p = st._Context__get_plugin(run_id="0", data_type=data_type)
+    p = st._get_plugins((data_type,), "0")[data_type]
 
     for suffix in suffixes:
         snake = "_" + strax.camel_to_snake(suffix)
 
         class new_plugin(plugin):
             suffix = snake
+            
+            # A fix for EventInfoSalted
+            if not issubclass(plugin, MergeOnlyPlugin):
 
-            def infer_dtype(self):
-                # some plugins like PulseProcessing uses self.deps in infer_dtype,
-                # which will cause error because the dependency tree changes
-                # https://github.com/XENONnT/straxen/blob/b4910e560a6a7f11288a4368816e692c26f8bc73/straxen/plugins/records/records.py#L142
-                # so we assign the dtype manually and raise error in infer_dtype method
-                raise RuntimeError
+                def infer_dtype(self):
+                    # some plugins like PulseProcessing uses self.deps in infer_dtype,
+                    # which will cause error because the dependency tree changes
+                    # https://github.com/XENONnT/straxen/blob/b4910e560a6a7f11288a4368816e692c26f8bc73/straxen/plugins/records/records.py#L142
+                    # so we assign the dtype manually and raise error in infer_dtype method
+                    
+                    raise RuntimeError
 
             if not issubclass(plugin, LoopPlugin):
 
@@ -232,7 +256,9 @@ def plugin_factory(
             if issubclass(plugin, CutPlugin):
 
                 def cut_by(self, **kwargs):
-                    return super().cut_by(**keys_detach_suffix(kwargs, self.suffix))
+                    return super().cut_by(**values_detach_suffix(
+                        keys_detach_suffix(kwargs, self.suffix), self.suffix
+                    ))
 
         new_plugin = assign_plugin_attributes(
             new_plugin,
@@ -297,14 +323,14 @@ def _salt_to_context(self):
             PeakProximitySalted,
             PeakShadowSalted,
             PeakAmbienceSalted,
-            PeakNearestTriggeringSalted,
-            PeakSEScoreSalted,
+            # PeakNearestTriggeringSalted,
+            # PeakSEScoreSalted,
             EventsSalted,
             EventBasicsSalted,
             EventShadowSalted,
             EventAmbienceSalted,
-            EventNearestTriggeringSalted,
-            EventSEScoreSalted,
+            # EventNearestTriggeringSalted,
+            # EventSEScoreSalted,
             EventsCombine,
         )
     )

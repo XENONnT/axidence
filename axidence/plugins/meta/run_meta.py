@@ -1,6 +1,7 @@
 import numpy as np
 import strax
 from strax import ExhaustPlugin
+# from ..exhaust_plugin import ExhaustPlugin
 
 
 class RunMeta(ExhaustPlugin):

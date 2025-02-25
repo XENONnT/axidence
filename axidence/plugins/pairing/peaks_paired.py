@@ -2,7 +2,10 @@ import warnings
 from immutabledict import immutabledict
 import numpy as np
 import strax
-from strax import Plugin, ExhaustPlugin, DownChunkingPlugin
+from strax import Plugin
+from strax import ExhaustPlugin, DownChunkingPlugin
+# from ..exhaust_plugin import ExhaustPlugin
+# from ..down_chunking_plugin import DownChunkingPlugin
 import straxen
 from straxen import units
 from straxen import PeakProximity

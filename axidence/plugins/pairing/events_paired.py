@@ -1,6 +1,7 @@
 import numpy as np
 import strax
 from strax import OverlapWindowPlugin
+# from ..overlap_window_plugin import OverlapWindowPlugin
 import straxen
 from straxen import Events, EventBasics
 

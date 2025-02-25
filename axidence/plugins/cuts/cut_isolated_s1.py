@@ -1,4 +1,6 @@
-from strax import parse_selection, CutPlugin
+from ...utils import parse_selection
+# from ..cut_plugin import CutPlugin
+from strax import CutPlugin
 from strax import SaveWhen
 import straxen
 
