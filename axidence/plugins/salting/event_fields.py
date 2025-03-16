@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 import strax
 from strax import Plugin
-from straxen import EventShadow, EventAmbience, EventNearestTriggering, EventSEScore
+from straxen import EventShadow, EventAmbience, EventNearestTriggering, EventSEScore, EventAmbience_
 
 from ...utils import merge_salted_real
 
@@ -71,5 +71,19 @@ class EventSEScoreSalted(EventFieldsSalted, EventSEScore):
         "peak_se_score",
     )
     provides = "event_se_score_salted"
+    data_kind = "events_salted"
+    save_when = strax.SaveWhen.EXPLICIT
+
+
+class EventAmbience_Salted(EventFieldsSalted, EventAmbience_):
+    __version__ = "0.0.0"
+    depends_on = (
+        "event_basics_salted",
+        "peaks_salted",
+        "peak_ambience__salted",
+        "peak_basics",
+        "peak_ambience_",
+    )
+    provides = "event_ambience__salted"
     data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT

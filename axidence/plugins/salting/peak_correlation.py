@@ -1,6 +1,13 @@
 import numpy as np
 import strax
-from straxen import PeakProximity, PeakShadow, PeakAmbience, PeakNearestTriggering, PeakSEScore
+from straxen import (
+    PeakProximity,
+    PeakShadow,
+    PeakAmbience,
+    PeakNearestTriggering,
+    PeakSEScore,
+    PeakAmbience_,
+)
 
 from ...utils import copy_dtype
 
@@ -132,3 +139,24 @@ class PeakSEScoreSalted(PeakSEScore):
         return dict(
             time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_score=se_score
         )
+
+
+class PeakAmbience_Salted(PeakAmbience_):
+    __version__ = "0.0.0"
+    child_plugin = True
+    depends_on = ("peaks_salted", "peak_basics", "peak_positions", "cut_time_veto_peak")
+    provides = "peak_ambience__salted"
+    data_kind = "peaks_salted"
+    save_when = strax.SaveWhen.EXPLICIT
+
+    def infer_dtype(self):
+        dtype = super().infer_dtype()
+        dtype += [
+            (("Salting number of peaks", "salt_number"), np.int64),
+        ]
+        return dtype
+
+    def compute(self, peaks_salted, peaks):
+        result = self.compute_ambience(peaks, peaks_salted)
+        result["salt_number"] = peaks_salted["salt_number"]
+        return result
