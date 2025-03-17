@@ -144,7 +144,13 @@ class PeakSEScoreSalted(PeakSEScore):
 class PeakAmbience_Salted(PeakAmbience_):
     __version__ = "0.0.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_basics", "peak_positions", "cut_time_veto_peak")
+    depends_on = (
+        "peaks_salted",
+        "peak_basics",
+        "peak_positions",
+        "cut_time_veto_peak",
+        "lone_hits",
+    )
     provides = "peak_ambience__salted"
     data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
@@ -156,7 +162,7 @@ class PeakAmbience_Salted(PeakAmbience_):
         ]
         return dtype
 
-    def compute(self, peaks_salted, peaks):
-        result = self.compute_ambience(peaks, peaks_salted)
+    def compute(self, peaks_salted, peaks, lone_hits):
+        result = self.compute_ambience(peaks, lone_hits, peaks_salted)
         result["salt_number"] = peaks_salted["salt_number"]
         return result
