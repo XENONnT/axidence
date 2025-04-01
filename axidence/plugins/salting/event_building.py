@@ -15,10 +15,8 @@ class EventsSalted(Events, ExhaustPlugin):
     depends_on = (
         "peaks_salted",
         "peak_proximity_salted",
-        "peak_ambience__salted",
         "peak_basics",
         "peak_proximity",
-        "peak_ambience_",
     )
     provides = "events_salted"
     data_kind = "events_salted"
@@ -62,10 +60,6 @@ class EventsSalted(Events, ExhaustPlugin):
                 f"The window {self.window}ns is too small to extend the event "
                 f"while the gap_threshold is about {self.left_extension + self.right_extension}!"
             )
-
-        # for now, only S2 can trigger
-        if not self.exclude_s1_as_triggering_peaks:
-            raise NotImplementedError("Only S2 can trigger for now!")
 
     def get_window_size(self):
         return max(super().get_window_size(), self.window * 10)
@@ -153,7 +147,6 @@ class EventBasicsSOMSalted(EventBasicsSOM, ExhaustPlugin):
         "events_salted",
         "peaks_salted",
         "peak_proximity_salted",
-        "peak_ambience__salted",
         "peak_basics",
         "peak_proximity",
         "peak_positions",

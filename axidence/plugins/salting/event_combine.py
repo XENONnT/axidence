@@ -10,9 +10,7 @@ class EventsCombine(ExhaustPlugin):
         "event_basics_salted",
         "event_shadow_salted",
         "event_ambience_salted",
-        "event_ambience__salted",
         "event_nearest_triggering_salted",
-        "event_se_score_salted",
     )
     provides = "events_combine"
     data_kind = "events_salted"

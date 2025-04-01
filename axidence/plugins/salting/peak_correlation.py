@@ -6,7 +6,6 @@ from straxen import (
     PeakAmbience,
     PeakNearestTriggering,
     PeakSEScore,
-    PeakAmbience_,
 )
 
 from ...utils import copy_dtype
@@ -15,7 +14,7 @@ from ...utils import copy_dtype
 class PeakProximitySalted(PeakProximity):
     __version__ = "0.0.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_basics")
+    depends_on = ("peaks_salted", "peak_basics", "peak_positions")
     provides = "peak_proximity_salted"
     data_kind = "peaks_salted"
     save_when = strax.SaveWhen.EXPLICIT
@@ -25,7 +24,7 @@ class PeakProximitySalted(PeakProximity):
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
-        required_names = ["time", "endtime", "n_competing", "n_competing_left"]
+        required_names = ["time", "endtime", "proximity_score", "n_competing_left", "n_competing"]
         dtype = copy_dtype(dtype_reference, required_names)
         # since event_number is int64 in event_basics
         dtype += [
@@ -34,19 +33,11 @@ class PeakProximitySalted(PeakProximity):
         return dtype
 
     def compute(self, peaks_salted, peaks):
-        mask = np.isin(peaks["type"], [1, 2])
-        windows = strax.touching_windows(peaks[mask], peaks_salted, window=self.nearby_window)
-        n_left, n_tot = self.find_n_competing(
-            peaks[mask], peaks_salted, windows, fraction=self.min_area_fraction
-        )
-        return dict(
-            time=peaks_salted["time"],
-            endtime=strax.endtime(peaks_salted),
-            # here the plus one accounts for the peak itself
-            n_competing=n_tot + 1,
-            n_competing_left=n_left,
-            salt_number=peaks_salted["salt_number"],
-        )
+        result = self.compute_proximity(peaks, peaks_salted)
+        result["salt_number"] = peaks_salted["salt_number"]
+        # here the plus one accounts for the peak itself
+        result["n_competing"] += 1
+        return result
 
 
 class PeakShadowSalted(PeakShadow):
@@ -97,10 +88,8 @@ class PeakNearestTriggeringSalted(PeakNearestTriggering):
     depends_on = (
         "peaks_salted",
         "peak_proximity_salted",
-        "peak_ambience__salted",
         "peak_basics",
         "peak_proximity",
-        "peak_ambience_",
     )
     provides = "peak_nearest_triggering_salted"
     data_kind = "peaks_salted"
@@ -139,30 +128,3 @@ class PeakSEScoreSalted(PeakSEScore):
         return dict(
             time=peaks_salted["time"], endtime=strax.endtime(peaks_salted), se_score=se_score
         )
-
-
-class PeakAmbience_Salted(PeakAmbience_):
-    __version__ = "0.0.0"
-    child_plugin = True
-    depends_on = (
-        "peaks_salted",
-        "peak_basics",
-        "peak_positions",
-        "cut_time_veto_peak",
-        "lone_hits",
-    )
-    provides = "peak_ambience__salted"
-    data_kind = "peaks_salted"
-    save_when = strax.SaveWhen.EXPLICIT
-
-    def infer_dtype(self):
-        dtype = super().infer_dtype()
-        dtype += [
-            (("Salting number of peaks", "salt_number"), np.int64),
-        ]
-        return dtype
-
-    def compute(self, peaks_salted, peaks, lone_hits):
-        result = self.compute_ambience(peaks, lone_hits, peaks_salted)
-        result["salt_number"] = peaks_salted["salt_number"]
-        return result

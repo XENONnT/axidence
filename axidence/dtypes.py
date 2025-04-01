@@ -54,8 +54,6 @@ shadow_fields = [
 
 ambience_fields = ["n_lh_before", "n_s0_before", "n_s1_before", "n_s2_before", "n_s2_near"]
 
-se_score_fields = ["se_score"]
-
 nearest_triggering_fields = []
 for direction in ["left", "right"]:
     nearest_triggering_fields += [
@@ -68,15 +66,12 @@ for direction in ["left", "right"]:
     ]
 
 peak_misc_fields = list(strax.to_numpy_dtype(som_additional_fields).names) + [
-    "ambience_1d_score",
-    "ambience_2d_score",
-    "n_competing",
+    "proximity_score",
     "n_competing_left",
+    "n_competing",
 ]
 
-correlation_fields = (
-    shadow_fields + ambience_fields + se_score_fields + nearest_triggering_fields + peak_misc_fields
-)
+correlation_fields = shadow_fields + ambience_fields + nearest_triggering_fields + peak_misc_fields
 
 event_level_fields = [
     "n_peaks",

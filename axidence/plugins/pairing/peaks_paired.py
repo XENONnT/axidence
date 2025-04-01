@@ -5,7 +5,7 @@ import strax
 from strax import Plugin, ExhaustPlugin, DownChunkingPlugin
 import straxen
 from straxen import units
-from straxen import PeakProximity, PeakAmbience_
+from straxen import PeakProximity
 import GOFevaluation as ge
 
 from ...utils import copy_dtype
@@ -124,8 +124,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             (("Original endtime of peaks", "origin_endtime"), np.int64),
             (("Original center_time of peaks", "origin_center_time"), np.int64),
             (("Original n_competing", "origin_n_competing"), np.int32),
-            (("Original ambience_1d_score", "origin_ambience_1d_score"), np.float32),
-            (("Original ambience_2d_score", "origin_ambience_2d_score"), np.float32),
+            (("Original proximity_score", "origin_proximity_score"), np.float32),
             (("Original type of group", "origin_group_type"), np.int8),
             (("Original s1_index in isolated S1", "origin_s1_index"), np.int32),
             (("Original s2_index in isolated S2", "origin_s2_index"), np.int32),
@@ -512,8 +511,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[0]["origin_endtime"] = strax.endtime(s1)[s1_index]
             _array[0]["origin_center_time"] = s1["center_time"][s1_index]
             _array[0]["origin_n_competing"] = s1["n_competing"][s1_index]
-            _array[0]["origin_ambience_1d_score"] = s1["ambience_1d_score"][s1_index]
-            _array[0]["origin_ambience_2d_score"] = s1["ambience_2d_score"][s1_index]
+            _array[0]["origin_proximity_score"] = s1["proximity_score"][s1_index]
             _array[0]["origin_group_type"] = 1
             _array[0]["center_time"] = s1_center_time[i]
             _array[0]["time"] = s1_center_time[i] - (
@@ -534,8 +532,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[1:]["origin_endtime"] = strax.endtime(s2_group_i)
             _array[1:]["origin_center_time"] = s2_group_i["center_time"]
             _array[1:]["origin_n_competing"] = s2_group_i["n_competing"]
-            _array[1:]["origin_ambience_1d_score"] = s2_group_i["ambience_1d_score"]
-            _array[1:]["origin_ambience_2d_score"] = s2_group_i["ambience_2d_score"]
+            _array[1:]["origin_proximity_score"] = s2_group_i["proximity_score"]
             _array[1:]["origin_group_type"] = 2
             _array[1:]["center_time"] = s2_center_time[i] - (
                 s2_group_i["center_time"][s2_index] - s2_group_i["center_time"]
@@ -740,6 +737,12 @@ class PeakProximityPaired(PeakProximity):
     save_when = strax.SaveWhen.EXPLICIT
     allow_superrun = True
 
+    use_origin_proximity_score = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether use original proximity_score",
+    )
+
     use_origin_n_competing = straxen.URLConfig(
         default=False,
         type=bool,
@@ -748,12 +751,17 @@ class PeakProximityPaired(PeakProximity):
 
     def infer_dtype(self):
         dtype_reference = strax.unpack_dtype(self.deps["peaks_paired"].dtype_for("peaks_paired"))
-        required_names = ["time", "endtime", "n_competing"]
+        required_names = ["time", "endtime", "proximity_score", "n_competing"]
         dtype = copy_dtype(dtype_reference, required_names)
         return dtype
 
     def compute(self, peaks_paired):
         peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
+        if self.use_origin_proximity_score:
+            warnings.warn("Using original proximity_score for paired peaks")
+            proximity_score = peaks_paired["origin_proximity_score"].copy()
+        else:
+            raise NotImplementedError
         if self.use_origin_n_competing:
             warnings.warn("Using original n_competing for paired peaks")
             n_competing = peaks_paired["origin_n_competing"].copy()
@@ -789,44 +797,8 @@ class PeakProximityPaired(PeakProximity):
         return dict(
             time=peaks_paired["time"],
             endtime=strax.endtime(peaks_paired),
+            proximity_score=proximity_score[peaks_event_number_sorted["time"].argsort()],
             n_competing=n_competing[peaks_event_number_sorted["time"].argsort()],
-        )
-
-
-class PeakAmbience_Paired(PeakAmbience_):
-    __version__ = "0.0.0"
-    depends_on = "peaks_paired"
-    provides = "peak_ambience__paired"
-    data_kind = "peaks_paired"
-    save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
-
-    use_origin_ambience = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether use original ambience scores",
-    )
-
-    def infer_dtype(self):
-        dtype_reference = strax.unpack_dtype(self.deps["peaks_paired"].dtype_for("peaks_paired"))
-        required_names = ["time", "endtime", "ambience_1d_score", "ambience_2d_score"]
-        dtype = copy_dtype(dtype_reference, required_names)
-        return dtype
-
-    def compute(self, peaks_paired):
-        peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
-        if self.use_origin_ambience:
-            warnings.warn("Using original ambience scores for paired peaks")
-            ambience_1d_score = peaks_paired["origin_ambience_1d_score"].copy()
-            ambience_2d_score = peaks_paired["origin_ambience_2d_score"].copy()
-        else:
-            raise NotImplementedError
-
-        return dict(
-            time=peaks_paired["time"],
-            endtime=strax.endtime(peaks_paired),
-            ambience_1d_score=ambience_1d_score[peaks_event_number_sorted["time"].argsort()],
-            ambience_2d_score=ambience_2d_score[peaks_event_number_sorted["time"].argsort()],
         )
 
 
