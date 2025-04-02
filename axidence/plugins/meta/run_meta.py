@@ -7,7 +7,7 @@ class RunMeta(ExhaustPlugin):
     """Plugin that provides run metadata."""
 
     __version__ = "0.0.0"
-    depends_on = "event_basics"
+    depends_on = "peak_basics"
     provides = "run_meta"
     data_kind = "run_meta"
     save_when = strax.SaveWhen.EXPLICIT
