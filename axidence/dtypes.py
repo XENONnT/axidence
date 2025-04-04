@@ -48,7 +48,9 @@ shadow_fields = [
     "x_s2_position_shadow",
     "y_s2_position_shadow",
     "pdf_s2_position_shadow",
+    "nearest_s1",
     "nearest_dt_s1",
+    "nearest_s2",
     "nearest_dt_s2",
 ]
 

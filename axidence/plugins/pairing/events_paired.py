@@ -81,7 +81,9 @@ class EventInfosPaired(Events):
             required_names += [f"n_{ambience}"]
         required_names += [
             "pdf_s2_position_shadow",
+            "nearest_s1",
             "nearest_dt_s1",
+            "nearest_s2",
             "nearest_dt_s2",
             "left_dtime",
             "right_dtime",
