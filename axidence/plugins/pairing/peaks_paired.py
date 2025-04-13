@@ -782,30 +782,22 @@ class PeakProximityPaired(PeakProximity):
             )
             event_number_index = np.append(event_number_index, len(peaks_event_number_sorted))
             for i in range(len(event_number)):
-                areas = peaks_event_number_sorted["area"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                types = peaks_event_number_sorted["origin_group_type"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                n_competing_s = peaks_event_number_sorted["origin_n_competing"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                n_competing_left_s = peaks_event_number_sorted["origin_n_competing_left"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
+                sl = slice(event_number_index[i], event_number_index[i + 1])
+                areas = peaks_event_number_sorted["area"][sl].copy()
+                types = peaks_event_number_sorted["origin_group_type"][sl].copy()
+                n_competing_s = peaks_event_number_sorted["origin_n_competing"][sl].copy()
+                n_competing_left_s = peaks_event_number_sorted["origin_n_competing_left"][sl].copy()
                 threshold = areas * self.proximity_min_area_fraction
                 for j in range(event_number_count[i]):
                     if types[j] == 1:
                         n_competing_s[j] += np.sum(areas[types == 2] > threshold[j])
-                        n_competing_left_s[j] += np.sum(areas[types == 2] > threshold[j])
+                        # S1 is in before S2
+                        # n_competing_left_s[j] += np.sum(areas[types == 2] > threshold[j])
                     elif types[j] == 2:
                         n_competing_s[j] += np.sum(areas[types == 1] > threshold[j])
                         n_competing_left_s[j] += np.sum(areas[types == 1] > threshold[j])
-                n_competing[event_number_index[i] : event_number_index[i + 1]] = n_competing_s
-                n_competing_left[event_number_index[i] : event_number_index[i + 1]] = (
-                    n_competing_left_s
-                )
+                n_competing[sl] = n_competing_s
+                n_competing_left[sl] = n_competing_left_s
 
         return dict(
             time=peaks_paired["time"],
