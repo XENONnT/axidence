@@ -786,7 +786,7 @@ class PeakProximityPaired(PeakProximity):
                 n_competing_s = peaks_event_number_sorted["origin_n_competing"][
                     event_number_index[i] : event_number_index[i + 1]
                 ].copy()
-                threshold = areas * self.min_area_fraction
+                threshold = areas * self.proximity_min_area_fraction
                 for j in range(event_number_count[i]):
                     if types[j] == 1:
                         n_competing_s[j] += np.sum(areas[types == 2] > threshold[j])
