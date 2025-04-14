@@ -54,7 +54,14 @@ shadow_fields = [
     "nearest_dt_s2",
 ]
 
-ambience_fields = ["n_lh_before", "n_s0_before", "n_s1_before", "n_s2_before", "n_s2_near"]
+ambience_fields = [
+    "n_lh_before",
+    "n_s0_before",
+    "n_s1_before",
+    "n_s2_before",
+    "n_s2_near",
+    "s_before",
+]
 
 nearest_triggering_fields = []
 for direction in ["left", "right"]:

@@ -5,6 +5,7 @@ import straxen
 from straxen import Events
 
 from ...utils import copy_dtype
+from ...dtypes import ambience_fields
 
 export, __all__ = strax.exporter()
 
@@ -61,7 +62,7 @@ class EventInfosPaired(Events):
     allow_superrun = True
 
     ambience_fields = straxen.URLConfig(
-        default=["lh_before", "s0_before", "s1_before", "s2_before", "s2_near"],
+        default=ambience_fields,
         type=(list, tuple),
         help="Needed ambience related fields",
     )
