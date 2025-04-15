@@ -78,8 +78,7 @@ class EventInfosPaired(Events):
         required_names = []
         for key in ["s2_time_shadow", "s2_position_shadow"]:
             required_names += [f"shadow_{key}", f"dt_{key}"]
-        for ambience in self.ambience_fields:
-            required_names += [f"n_{ambience}"]
+        required_names += self.ambience_fields
         required_names += [
             "pdf_s2_position_shadow",
             "nearest_s1",
