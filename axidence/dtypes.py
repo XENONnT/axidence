@@ -1,7 +1,6 @@
 import numpy as np
 import strax
 import straxen
-from straxen.plugins.peaklets.peaklet_classification_som import som_additional_fields
 
 from straxen.misc import kind_colors
 
@@ -67,7 +66,9 @@ for direction in ["left", "right"]:
         f"{direction}_area",
     ]
 
-peak_misc_fields = list(strax.to_numpy_dtype(som_additional_fields).names) + [
+peak_misc_fields = [
+    "center_time",
+    "area_fraction_top",
     "n_competing",
     "n_competing_left",
 ]

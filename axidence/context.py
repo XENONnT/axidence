@@ -4,7 +4,7 @@ import numpy as np
 import strax
 from strax import LoopPlugin, CutPlugin, CutList
 import straxen
-from straxen import EventBasicsSOM, EventInfoDouble
+from straxen import EventBasics, EventInfoDouble
 
 from axidence import RunMeta, EventsSalting, PeaksSalted
 from axidence import (
@@ -16,7 +16,7 @@ from axidence import (
 )
 from axidence import (
     EventsSalted,
-    EventBasicsSOMSalted,
+    EventBasicsSalted,
     EventShadowSalted,
     EventAmbienceSalted,
     EventNearestTriggeringSalted,
@@ -43,7 +43,7 @@ __all__.extend(["default_assign_attributes", "default_assign_appended_attributes
 
 
 default_assign_attributes = {
-    EventBasicsSOM: ["peak_properties", "posrec_save"],
+    EventBasics: ["peak_properties", "posrec_save"],
     EventInfoDouble: ["input_dtype"],
 }
 
@@ -304,7 +304,7 @@ def _salt_to_context(self):
             PeakNearestTriggeringSalted,
             PeakSEDensitySalted,
             EventsSalted,
-            EventBasicsSOMSalted,
+            EventBasicsSalted,
             EventShadowSalted,
             EventAmbienceSalted,
             EventNearestTriggeringSalted,
