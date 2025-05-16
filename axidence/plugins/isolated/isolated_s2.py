@@ -29,7 +29,10 @@ class IsolatedS2(Plugin):
     data_kind = "isolated_s2"
 
     isolated_peaks_fields = straxen.URLConfig(
-        default=list(strax.merged_dtype([np.dtype(peaks_dtype()), np.dtype(peak_positions_dtype())]).names()) + correlation_fields,
+        default=list(
+            strax.merged_dtype([np.dtype(peaks_dtype()), np.dtype(peak_positions_dtype())]).names()
+        )
+        + correlation_fields,
         type=(list, tuple),
         help="Needed fields in isolated peaks",
     )
