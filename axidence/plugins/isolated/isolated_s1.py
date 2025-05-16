@@ -4,7 +4,7 @@ from strax import Plugin
 import straxen
 
 from ...utils import needed_dtype, copy_dtype
-from ...dtypes import positioned_peak_dtype, correlation_fields
+from ...dtypes import peaks_dtype, peak_positions_dtype, correlation_fields
 
 
 class IsolatedS1(Plugin):
@@ -24,7 +24,12 @@ class IsolatedS1(Plugin):
     data_kind = "isolated_s1"
 
     isolated_peaks_fields = straxen.URLConfig(
-        default=list(np.dtype(positioned_peak_dtype()).names) + correlation_fields,
+        default=list(
+            np.dtype(
+                strax.merged_dtype([np.dtype(peaks_dtype()), np.dtype(peak_positions_dtype())])
+            ).names
+        )
+        + correlation_fields,
         type=(list, tuple),
         help="Needed fields in isolated peaks",
     )
