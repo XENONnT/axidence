@@ -5,6 +5,7 @@ import straxen
 from straxen import Events
 
 from ...utils import copy_dtype
+from ...dtypes import ambience_fields
 
 export, __all__ = strax.exporter()
 
@@ -61,13 +62,13 @@ class EventInfosPaired(Events):
     allow_superrun = True
 
     ambience_fields = straxen.URLConfig(
-        default=["lh_before", "s0_before", "s1_before", "s2_before", "s2_near"],
+        default=ambience_fields,
         type=(list, tuple),
         help="Needed ambience related fields",
     )
 
     alternative_peak_add_fields = straxen.URLConfig(
-        default=["se_score"],
+        default=[],
         type=(list, tuple),
         help="Fields to store also for alternative peaks",
     )
@@ -77,13 +78,13 @@ class EventInfosPaired(Events):
         required_names = []
         for key in ["s2_time_shadow", "s2_position_shadow"]:
             required_names += [f"shadow_{key}", f"dt_{key}"]
-        for ambience in self.ambience_fields:
-            required_names += [f"n_{ambience}"]
+        required_names += self.ambience_fields
         required_names += [
             "pdf_s2_position_shadow",
+            "nearest_s1",
             "nearest_dt_s1",
+            "nearest_s2",
             "nearest_dt_s2",
-            "se_score",
             "left_dtime",
             "right_dtime",
         ]

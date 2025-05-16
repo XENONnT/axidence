@@ -26,9 +26,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     salting_rate = straxen.URLConfig(
         default=10,
         type=(int, float, list, tuple),
-        help=(
-            "Rate of salting in Hz, " "if list or tuple, they are the factor for 2 and 3+ hits S1",
-        ),
+        help="Rate of salting in Hz, if list or tuple, they are the factor for 2 and 3+ hits S1",
     )
 
     s1_area_range = straxen.URLConfig(
@@ -123,7 +121,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         if isinstance(self.salting_rate, (list, tuple)):
             if len(self.salting_rate) != 2:
                 raise ValueError(
-                    "The length of salting_rate should be 2 " "if provided list or tuple!"
+                    "The length of salting_rate should be 2 if provided list or tuple!"
                 )
             self.hits_salting_rate = list(self.salting_rate)
         else:

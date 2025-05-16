@@ -12,7 +12,12 @@ from ...utils import needed_dtype, merge_salted_real
 class EventsSalted(Events, ExhaustPlugin):
     __version__ = "0.2.0"
     child_plugin = True
-    depends_on = ("peaks_salted", "peak_proximity_salted", "peak_basics", "peak_proximity")
+    depends_on = (
+        "peaks_salted",
+        "peak_proximity_salted",
+        "peak_basics",
+        "peak_proximity",
+    )
     provides = "events_salted"
     data_kind = "events_salted"
     save_when = strax.SaveWhen.EXPLICIT
@@ -55,10 +60,6 @@ class EventsSalted(Events, ExhaustPlugin):
                 f"The window {self.window}ns is too small to extend the event "
                 f"while the gap_threshold is about {self.left_extension + self.right_extension}!"
             )
-
-        # for now, only S2 can trigger
-        if not self.exclude_s1_as_triggering_peaks:
-            raise NotImplementedError("Only S2 can trigger for now!")
 
     def get_window_size(self):
         return max(super().get_window_size(), self.window * 10)
