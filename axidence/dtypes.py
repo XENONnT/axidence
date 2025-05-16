@@ -1,7 +1,6 @@
 import numpy as np
 import strax
 import straxen
-from straxen.plugins.peaklets.peaklet_classification_som import som_additional_fields
 
 from straxen.misc import kind_colors
 
@@ -21,21 +20,18 @@ kind_colors.update(
 )
 
 
+def peaks_dtype():
+    st = strax.Context(config=straxen.contexts.common_config, **straxen.contexts.common_opts)
+    data_name = "peaks"
+    PeaksSOM0 = st._get_plugins((data_name,), "0")[data_name]
+    return strax.unpack_dtype(PeaksSOM.dtype)
+
+
 def peak_positions_dtype():
     st = strax.Context(config=straxen.contexts.common_config, **straxen.contexts.common_opts)
     data_name = "peak_positions"
     PeakPositionsNT0 = st._get_plugins((data_name,), "0")[data_name]
     return strax.unpack_dtype(PeakPositionsNT0.dtype)
-
-
-def positioned_peak_dtype(n_channels=straxen.n_tpc_pmts):
-    dtype = strax.merged_dtype(
-        [
-            np.dtype(strax.peak_dtype(n_channels=straxen.n_tpc_pmts)),
-            np.dtype(peak_positions_dtype()),
-        ]
-    )
-    return dtype
 
 
 shadow_fields = [
@@ -67,7 +63,7 @@ for direction in ["left", "right"]:
         f"{direction}_area",
     ]
 
-peak_misc_fields = list(strax.to_numpy_dtype(som_additional_fields).names) + [
+peak_misc_fields = [
     "n_competing",
     "n_competing_left",
 ]
