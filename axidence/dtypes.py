@@ -1,4 +1,3 @@
-import numpy as np
 import strax
 import straxen
 
@@ -24,7 +23,7 @@ def peaks_dtype():
     st = strax.Context(config=straxen.contexts.common_config, **straxen.contexts.common_opts)
     data_name = "peaks"
     PeaksSOM0 = st._get_plugins((data_name,), "0")[data_name]
-    return strax.unpack_dtype(PeaksSOM.dtype)
+    return strax.unpack_dtype(PeaksSOM0.dtype)
 
 
 def peak_positions_dtype():
