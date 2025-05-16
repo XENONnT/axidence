@@ -32,7 +32,7 @@ class IsolatedS2(Plugin):
         default=list(
             np.dtype(
                 strax.merged_dtype([np.dtype(peaks_dtype()), np.dtype(peak_positions_dtype())])
-            ).names()
+            ).names
         )
         + correlation_fields,
         type=(list, tuple),
