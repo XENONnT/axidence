@@ -5,7 +5,7 @@ import straxen
 from straxen import Events
 
 from ...utils import copy_dtype
-from ...dtypes import ambience_fields
+from ...dtypes import ambience_fields, se_score_fields
 
 export, __all__ = strax.exporter()
 
@@ -68,7 +68,7 @@ class EventInfosPaired(Events):
     )
 
     alternative_peak_add_fields = straxen.URLConfig(
-        default=[],
+        default=se_score_fields,
         type=(list, tuple),
         help="Fields to store also for alternative peaks",
     )
