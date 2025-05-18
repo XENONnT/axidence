@@ -124,6 +124,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             (("Original endtime of peaks", "origin_endtime"), np.int64),
             (("Original center_time of peaks", "origin_center_time"), np.int64),
             (("Original n_competing", "origin_n_competing"), np.int32),
+            (("Original n_competing_left", "origin_n_competing_left"), np.int32),
+            (("Original proximity_score", "origin_proximity_score"), np.float32),
             (("Original type of group", "origin_group_type"), np.int8),
             (("Original s1_index in isolated S1", "origin_s1_index"), np.int32),
             (("Original s2_index in isolated S2", "origin_s2_index"), np.int32),
@@ -510,6 +512,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[0]["origin_endtime"] = strax.endtime(s1)[s1_index]
             _array[0]["origin_center_time"] = s1["center_time"][s1_index]
             _array[0]["origin_n_competing"] = s1["n_competing"][s1_index]
+            _array[0]["origin_n_competing_left"] = s1["n_competing_left"][s1_index]
+            _array[0]["origin_proximity_score"] = s1["proximity_score"][s1_index]
             _array[0]["origin_group_type"] = 1
             _array[0]["center_time"] = s1_center_time[i]
             _array[0]["time"] = s1_center_time[i] - (
@@ -530,6 +534,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[1:]["origin_endtime"] = strax.endtime(s2_group_i)
             _array[1:]["origin_center_time"] = s2_group_i["center_time"]
             _array[1:]["origin_n_competing"] = s2_group_i["n_competing"]
+            _array[1:]["origin_n_competing_left"] = s2_group_i["n_competing_left"]
+            _array[1:]["origin_proximity_score"] = s2_group_i["proximity_score"]
             _array[1:]["origin_group_type"] = 2
             _array[1:]["center_time"] = s2_center_time[i] - (
                 s2_group_i["center_time"][s2_index] - s2_group_i["center_time"]
@@ -734,6 +740,12 @@ class PeakProximityPaired(PeakProximity):
     save_when = strax.SaveWhen.EXPLICIT
     allow_superrun = True
 
+    use_origin_proximity_score = straxen.URLConfig(
+        default=True,
+        type=bool,
+        help="Whether use original proximity_score",
+    )
+
     use_origin_n_competing = straxen.URLConfig(
         default=False,
         type=bool,
@@ -742,20 +754,27 @@ class PeakProximityPaired(PeakProximity):
 
     def infer_dtype(self):
         dtype_reference = strax.unpack_dtype(self.deps["peaks_paired"].dtype_for("peaks_paired"))
-        required_names = ["time", "endtime", "n_competing"]
+        required_names = ["time", "endtime", "proximity_score", "n_competing_left", "n_competing"]
         dtype = copy_dtype(dtype_reference, required_names)
         return dtype
 
     def compute(self, peaks_paired):
+        peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
+        if self.use_origin_proximity_score:
+            warnings.warn("Using original proximity_score for paired peaks")
+            proximity_score = peaks_paired["origin_proximity_score"].copy()
+        else:
+            raise NotImplementedError
         if self.use_origin_n_competing:
             warnings.warn("Using original n_competing for paired peaks")
             n_competing = peaks_paired["origin_n_competing"].copy()
+            n_competing_left = peaks_paired["origin_n_competing_left"].copy()
         else:
             # add `n_competing` to isolated S1 and isolated S2 because injection of peaks
             # will not consider the competing window because
             # that window is much larger than the max drift time
             n_competing = np.zeros(len(peaks_paired), self.dtype["n_competing"])
-            peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
+            n_competing_left = np.zeros(len(peaks_paired), self.dtype["n_competing_left"])
             event_number, event_number_index, event_number_count = np.unique(
                 peaks_event_number_sorted["event_number"],
                 return_index=True,
@@ -763,26 +782,28 @@ class PeakProximityPaired(PeakProximity):
             )
             event_number_index = np.append(event_number_index, len(peaks_event_number_sorted))
             for i in range(len(event_number)):
-                areas = peaks_event_number_sorted["area"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                types = peaks_event_number_sorted["origin_group_type"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                n_competing_s = peaks_event_number_sorted["origin_n_competing"][
-                    event_number_index[i] : event_number_index[i + 1]
-                ].copy()
-                threshold = areas * self.min_area_fraction
+                sl = slice(event_number_index[i], event_number_index[i + 1])
+                areas = peaks_event_number_sorted["area"][sl].copy()
+                types = peaks_event_number_sorted["origin_group_type"][sl].copy()
+                n_competing_s = peaks_event_number_sorted["origin_n_competing"][sl].copy()
+                n_competing_left_s = peaks_event_number_sorted["origin_n_competing_left"][sl].copy()
+                threshold = areas * self.proximity_min_area_fraction
                 for j in range(event_number_count[i]):
                     if types[j] == 1:
                         n_competing_s[j] += np.sum(areas[types == 2] > threshold[j])
+                        # S1 is in before S2
+                        # n_competing_left_s[j] += np.sum(areas[types == 2] > threshold[j])
                     elif types[j] == 2:
                         n_competing_s[j] += np.sum(areas[types == 1] > threshold[j])
-                n_competing[event_number_index[i] : event_number_index[i + 1]] = n_competing_s
+                        n_competing_left_s[j] += np.sum(areas[types == 1] > threshold[j])
+                n_competing[sl] = n_competing_s
+                n_competing_left[sl] = n_competing_left_s
 
         return dict(
             time=peaks_paired["time"],
             endtime=strax.endtime(peaks_paired),
+            proximity_score=proximity_score[peaks_event_number_sorted["time"].argsort()],
+            n_competing_left=n_competing_left[peaks_event_number_sorted["time"].argsort()],
             n_competing=n_competing[peaks_event_number_sorted["time"].argsort()],
         )
 
