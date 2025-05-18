@@ -1,5 +1,11 @@
 v0.4.0 / 2025-05-18
--------------------
+* Be compatible with https://github.com/XENONnT/straxen/pull/1604 by @dachengx in https://github.com/XENONnT/axidence/pull/106
+* Be compatible with https://github.com/XENONnT/straxen/pull/1563 by @dachengx in https://github.com/XENONnT/axidence/pull/104
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.4...v0.4.0
+
+
+v0.3.4 / 2025-05-18
 * Be compatible with strax >= 2 and straxen >= 3 by @dachengx in https://github.com/XENONnT/axidence/pull/96
 * Validate the number of S1/2 group by @dachengx in https://github.com/XENONnT/axidence/pull/97
 * Replace `hyperrun` with `superrun` by @dachengx in https://github.com/XENONnT/axidence/pull/99
@@ -9,10 +15,8 @@ v0.4.0 / 2025-05-18
 * Inherit `center_time` from `peaklets` by @dachengx in https://github.com/XENONnT/axidence/pull/102
 * `n_competing` plus one by @dachengx in https://github.com/XENONnT/axidence/pull/103
 * Use numbered version of `docformatter` by @dachengx in https://github.com/XENONnT/axidence/pull/107
-* Be compatible with https://github.com/XENONnT/straxen/pull/1604 by @dachengx in https://github.com/XENONnT/axidence/pull/106
-* Be compatible with https://github.com/XENONnT/straxen/pull/1563 by @dachengx in https://github.com/XENONnT/axidence/pull/104
 
-**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.3...v0.4.0
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.3...v0.3.4
 
 
 v0.3.3 / 2024-12-27
