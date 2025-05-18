@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "axidence"
-version = "0.3.3"
+version = "0.3.4"
 description = "strax-based data-driven accidental coincidence background simulation and peak-level salting"
 readme = "README.md"
 license = "BSD-3-Clause"
