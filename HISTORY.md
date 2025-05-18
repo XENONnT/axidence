@@ -1,3 +1,11 @@
+v0.4.0 / 2025-05-18
+-------------------
+* Be compatible with https://github.com/XENONnT/straxen/pull/1604 by @dachengx in https://github.com/XENONnT/axidence/pull/106
+* Be compatible with https://github.com/XENONnT/straxen/pull/1563 by @dachengx in https://github.com/XENONnT/axidence/pull/104
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.4...v0.4.0
+
+
 v0.3.4 / 2025-05-18
 -------------------
 * Be compatible with strax >= 2 and straxen >= 3 by @dachengx in https://github.com/XENONnT/axidence/pull/96
