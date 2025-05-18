@@ -1,3 +1,18 @@
+v0.3.4 / 2025-05-18
+-------------------
+* Be compatible with strax >= 2 and straxen >= 3 by @dachengx in https://github.com/XENONnT/axidence/pull/96
+* Validate the number of S1/2 group by @dachengx in https://github.com/XENONnT/axidence/pull/97
+* Replace `hyperrun` with `superrun` by @dachengx in https://github.com/XENONnT/axidence/pull/99
+* Compatible with https://github.com/XENONnT/straxen/pull/1532 by @dachengx in https://github.com/XENONnT/axidence/pull/100
+* Remove CMT URLs by @dachengx in https://github.com/XENONnT/axidence/pull/101
+* Compatible with https://github.com/XENONnT/straxen/pull/1513 by @dachengx in https://github.com/XENONnT/axidence/pull/98
+* Inherit `center_time` from `peaklets` by @dachengx in https://github.com/XENONnT/axidence/pull/102
+* `n_competing` plus one by @dachengx in https://github.com/XENONnT/axidence/pull/103
+* Use numbered version of `docformatter` by @dachengx in https://github.com/XENONnT/axidence/pull/107
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.3.3...v0.3.4
+
+
 v0.3.3 / 2024-12-27
 -------------------
 * Poetry does not understand `requires-python` by @dachengx in https://github.com/XENONnT/axidence/pull/85
