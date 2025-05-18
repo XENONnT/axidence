@@ -43,13 +43,20 @@ shadow_fields = [
     "x_s2_position_shadow",
     "y_s2_position_shadow",
     "pdf_s2_position_shadow",
+    "nearest_s1",
     "nearest_dt_s1",
+    "nearest_s2",
     "nearest_dt_s2",
 ]
 
-ambience_fields = ["n_lh_before", "n_s0_before", "n_s1_before", "n_s2_before", "n_s2_near"]
-
-se_score_fields = ["se_score"]
+ambience_fields = [
+    "n_lh_before",
+    "n_s0_before",
+    "n_s1_before",
+    "n_s2_before",
+    "n_s2_near",
+    "s_before",
+]
 
 nearest_triggering_fields = []
 for direction in ["left", "right"]:
@@ -63,13 +70,12 @@ for direction in ["left", "right"]:
     ]
 
 peak_misc_fields = [
-    "n_competing",
+    "proximity_score",
     "n_competing_left",
+    "n_competing",
 ]
 
-correlation_fields = (
-    shadow_fields + ambience_fields + se_score_fields + nearest_triggering_fields + peak_misc_fields
-)
+correlation_fields = shadow_fields + ambience_fields + nearest_triggering_fields + peak_misc_fields
 
 event_level_fields = [
     "n_peaks",
