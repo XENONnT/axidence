@@ -10,7 +10,7 @@ repos:
     -   id: check-added-large-files
 
 -   repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 25.1.0
     hooks:
     -   id: black
         args: [--safe, --line-length=100]
@@ -19,12 +19,12 @@ repos:
         language_version: python3
 
 -   repo: https://github.com/pycqa/docformatter
-    rev: v1.7.6
+    rev: v1.7.7
     hooks:
     -   id: docformatter
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.16.0
     hooks:
     -   id: mypy
         additional_dependencies: [types-PyYAML, types-tqdm, types-pytz]
@@ -36,7 +36,7 @@ repos:
         files: ^docs/.*\.(rst|md)$
 
 -   repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
+    rev: 7.2.0
     hooks:
     -   id: flake8
 
