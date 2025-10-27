@@ -58,6 +58,13 @@ ambience_fields = [
     "s_before",
 ]
 
+cnf_score_fields = [
+    "cnf_score",
+    "cnf_nearest_dt",
+    "cnf_nearest_s2_area",
+    "cnf_nearest_dr",
+]
+
 nearest_triggering_fields = []
 for direction in ["left", "right"]:
     nearest_triggering_fields += [
@@ -75,7 +82,13 @@ peak_misc_fields = [
     "n_competing",
 ]
 
-correlation_fields = shadow_fields + ambience_fields + nearest_triggering_fields + peak_misc_fields
+correlation_fields = (
+    shadow_fields
+    + ambience_fields
+    + cnf_score_fields
+    + nearest_triggering_fields
+    + peak_misc_fields
+)
 
 event_level_fields = [
     "n_peaks",

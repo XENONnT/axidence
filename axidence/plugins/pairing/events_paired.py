@@ -5,7 +5,7 @@ import straxen
 from straxen import Events
 
 from ...utils import copy_dtype
-from ...dtypes import ambience_fields
+from ...dtypes import ambience_fields, cnf_score_fields
 
 export, __all__ = strax.exporter()
 
@@ -67,6 +67,12 @@ class EventInfosPaired(Events):
         help="Needed ambience related fields",
     )
 
+    cnf_score_fields = straxen.URLConfig(
+        default=cnf_score_fields,
+        type=(list, tuple),
+        help="Needed CNF score related fields",
+    )
+
     alternative_peak_add_fields = straxen.URLConfig(
         default=[],
         type=(list, tuple),
@@ -78,7 +84,7 @@ class EventInfosPaired(Events):
         required_names = []
         for key in ["s2_time_shadow", "s2_position_shadow"]:
             required_names += [f"shadow_{key}", f"dt_{key}"]
-        required_names += self.ambience_fields
+        required_names += self.ambience_fields + self.cnf_score_fields
         required_names += [
             "pdf_s2_position_shadow",
             "nearest_s1",

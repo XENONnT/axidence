@@ -15,6 +15,7 @@ class IsolatedS2(Plugin):
         "event_positions",
         "event_shadow",
         "event_ambience",
+        "event_cnf_score",
         "event_pattern_fit",
         "peaks",
         "peak_basics",
@@ -22,6 +23,7 @@ class IsolatedS2(Plugin):
         "peak_proximity",
         "peak_shadow",
         "peak_ambience",
+        "peak_cnf_score",
         "peak_nearest_triggering",
     )
     provides = "isolated_s2"
