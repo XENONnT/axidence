@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from scipy.interpolate import interp1d
 import strax
@@ -283,7 +284,8 @@ class VetoAwareEventSalting(EventsSalting):
         # Remove events that fall within veto intervals
         if len(veto_intervals) > 0:
             mask = np.ones(self.n_events, dtype=bool)
-            for v_start, v_end in veto_intervals:
+            for veto_interval in veto_intervals:
+                v_start, v_end = veto_interval['time'], veto_interval['endtime']
                 mask &= ~(
                     (self.events_salting["time"] >= v_start)
                     & (self.events_salting["time"] <= v_end)
