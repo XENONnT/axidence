@@ -1,7 +1,7 @@
 import pytest
 import axidence
 
-    
+
 class TestContext:
     def test_replication_tree(self):
         """Test the replication_tree method."""

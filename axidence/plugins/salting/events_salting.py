@@ -270,6 +270,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
                 start=_start, end=_end, data=self.events_salting[indices[0] : indices[1]]
             )
 
+
 class VetoAwareEventSalting(EventsSalting):
     __version__ = "0.0.1"
     child_plugin = True
@@ -289,7 +290,7 @@ class VetoAwareEventSalting(EventsSalting):
         if len(veto_intervals) > 0:
             mask = np.ones(self.n_events, dtype=bool)
             for veto_interval in veto_intervals:
-                v_start, v_end = veto_interval['time'], veto_interval['endtime']
+                v_start, v_end = veto_interval["time"], veto_interval["endtime"]
                 mask &= ~(
                     (self.events_salting["time"] >= v_start)
                     & (self.events_salting["time"] <= v_end)

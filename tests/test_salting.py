@@ -1,6 +1,7 @@
 import pytest
 from straxen.test_utils import nt_test_context, nt_test_run_id
 
+
 @pytest.mark.usefixtures("rm_strax_data")
 class TestSalting:
     @pytest.mark.parametrize("veto_aware", [False, True])
