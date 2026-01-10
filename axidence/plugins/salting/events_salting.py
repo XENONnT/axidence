@@ -274,7 +274,7 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
 class VetoAwareEventSalting(EventsSalting):
     __version__ = "0.0.1"
     child_plugin = True
-    depends_on = ("run_meta", "veto_intervals")
+    depends_on = ("run_meta", "veto_intervals")  # type: ignore[assignment]
     provides = "events_salting"
     data_kind = "events_salting"
 
