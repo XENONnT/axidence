@@ -277,6 +277,10 @@ class VetoAwareEventSalting(EventsSalting):
     provides = "events_salting"
     data_kind = "events_salting"
 
+    def setup(self):
+        super().setup()
+        self.logger = logging.getLogger(self.__class__.__name__)
+
     def compute(self, run_meta, veto_intervals, start, end):
         """Copy and assign the salting events into chunk."""
         self.sampling(start, end)
@@ -290,7 +294,7 @@ class VetoAwareEventSalting(EventsSalting):
                     (self.events_salting["time"] >= v_start)
                     & (self.events_salting["time"] <= v_end)
                 )
-            logging.info(
+            self.logger.debug(
                 f"Vetoed {self.n_events - np.sum(mask)} salting events due to veto intervals."
             )
             self.events_salting = self.events_salting[mask]
