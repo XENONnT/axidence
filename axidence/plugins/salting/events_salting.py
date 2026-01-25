@@ -299,6 +299,7 @@ class VetoAwareEventSalting(EventsSalting):
                 f"Vetoed {self.n_events - np.sum(mask)} salting events due to veto intervals."
             )
             self.events_salting = self.events_salting[mask]
+            self.events_salting -= self.events_salting[0]["salt_number"]  # Re-index salt_number
             self.n_events = len(self.events_salting)
 
         for chunk_i in range(len(self.slices)):
