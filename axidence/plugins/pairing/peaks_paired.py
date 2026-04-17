@@ -46,7 +46,10 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     )
 
     electron_drift_velocity = straxen.URLConfig(
-        default="xedocs://electron_drift_velocities?attr=value&run_id=plugin.run_id&version=ONLINE",
+        # Match SR1 EventBasics' CMT-backed default so straxen doesn't flag
+        # conflicting defaults across plugins (`xedocs://` is only available in
+        # the newer SR2 straxen).
+        default="cmt://electron_drift_velocity?version=ONLINE&run_id=plugin.run_id",
         cache=True,
         help="Vertical electron drift velocity in cm/ns (1e4 m/ms)",
     )
@@ -125,7 +128,8 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             (("Original center_time of peaks", "origin_center_time"), np.int64),
             (("Original n_competing", "origin_n_competing"), np.int32),
             (("Original n_competing_left", "origin_n_competing_left"), np.int32),
-            (("Original proximity_score", "origin_proximity_score"), np.float32),
+            # `origin_proximity_score` is dropped in the SR1 release because
+            # SR1 PeakProximity / IsolatedS1/S2 don't expose `proximity_score`.
             (("Original type of group", "origin_group_type"), np.int8),
             (("Original s1_index in isolated S1", "origin_s1_index"), np.int32),
             (("Original s2_index in isolated S2", "origin_s2_index"), np.int32),
@@ -513,7 +517,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[0]["origin_center_time"] = s1["center_time"][s1_index]
             _array[0]["origin_n_competing"] = s1["n_competing"][s1_index]
             _array[0]["origin_n_competing_left"] = s1["n_competing_left"][s1_index]
-            _array[0]["origin_proximity_score"] = s1["proximity_score"][s1_index]
+            # SR1 release: no proximity_score in upstream isolated peaks.
             _array[0]["origin_group_type"] = 1
             _array[0]["center_time"] = s1_center_time[i]
             _array[0]["time"] = s1_center_time[i] - (
@@ -535,7 +539,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             _array[1:]["origin_center_time"] = s2_group_i["center_time"]
             _array[1:]["origin_n_competing"] = s2_group_i["n_competing"]
             _array[1:]["origin_n_competing_left"] = s2_group_i["n_competing_left"]
-            _array[1:]["origin_proximity_score"] = s2_group_i["proximity_score"]
+            # SR1 release: no proximity_score in upstream isolated peaks.
             _array[1:]["origin_group_type"] = 2
             _array[1:]["center_time"] = s2_center_time[i] - (
                 s2_group_i["center_time"][s2_index] - s2_group_i["center_time"]
@@ -740,11 +744,8 @@ class PeakProximityPaired(PeakProximity):
     save_when = strax.SaveWhen.EXPLICIT
     allow_superrun = True
 
-    use_origin_proximity_score = straxen.URLConfig(
-        default=True,
-        type=bool,
-        help="Whether use original proximity_score",
-    )
+    # `use_origin_proximity_score` removed in the SR1 release because
+    # SR1 PeakProximity does not expose `proximity_score`.
 
     use_origin_n_competing = straxen.URLConfig(
         default=False,
@@ -754,17 +755,13 @@ class PeakProximityPaired(PeakProximity):
 
     def infer_dtype(self):
         dtype_reference = strax.unpack_dtype(self.deps["peaks_paired"].dtype_for("peaks_paired"))
-        required_names = ["time", "endtime", "proximity_score", "n_competing_left", "n_competing"]
+        # SR1: no `proximity_score` field on PeakProximity, so it is omitted here too.
+        required_names = ["time", "endtime", "n_competing_left", "n_competing"]
         dtype = copy_dtype(dtype_reference, required_names)
         return dtype
 
     def compute(self, peaks_paired):
         peaks_event_number_sorted = np.sort(peaks_paired, order=("event_number", "time"))
-        if self.use_origin_proximity_score:
-            warnings.warn("Using original proximity_score for paired peaks")
-            proximity_score = peaks_paired["origin_proximity_score"].copy()
-        else:
-            raise NotImplementedError
         if self.use_origin_n_competing:
             warnings.warn("Using original n_competing for paired peaks")
             n_competing = peaks_paired["origin_n_competing"].copy()
@@ -787,7 +784,9 @@ class PeakProximityPaired(PeakProximity):
                 types = peaks_event_number_sorted["origin_group_type"][sl].copy()
                 n_competing_s = peaks_event_number_sorted["origin_n_competing"][sl].copy()
                 n_competing_left_s = peaks_event_number_sorted["origin_n_competing_left"][sl].copy()
-                threshold = areas * self.proximity_min_area_fraction
+                # SR1 PeakProximity exposes `min_area_fraction`; modern straxen
+                # renamed it to `proximity_min_area_fraction`.
+                threshold = areas * self.min_area_fraction
                 for j in range(event_number_count[i]):
                     if types[j] == 1:
                         n_competing_s[j] += np.sum(areas[types == 2] > threshold[j])
@@ -802,7 +801,6 @@ class PeakProximityPaired(PeakProximity):
         return dict(
             time=peaks_paired["time"],
             endtime=strax.endtime(peaks_paired),
-            proximity_score=proximity_score[peaks_event_number_sorted["time"].argsort()],
             n_competing_left=n_competing_left[peaks_event_number_sorted["time"].argsort()],
             n_competing=n_competing[peaks_event_number_sorted["time"].argsort()],
         )

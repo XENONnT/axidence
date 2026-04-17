@@ -1,12 +1,12 @@
 import numpy as np
 import strax
 import straxen
-from straxen import PeakBasicsSOM
+from straxen import PeakBasics
 
 from ...utils import copy_dtype
 
 
-class PeaksSalted(PeakBasicsSOM):
+class PeaksSalted(PeakBasics):
     __version__ = "0.0.1"
     child_plugin = True
     depends_on = "events_salting"

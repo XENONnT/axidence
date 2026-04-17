@@ -1,4 +1,22 @@
 import numpy as np
+import strax
+
+
+def set_nan_defaults(arr):
+    """Fill a structured array with NaN (floats) / -1 (ints) defaults.
+
+    Thin wrapper around `strax.set_nan_defaults` (strax >= 1.7). On the SR1 strax
+    1.6.5 the helper is missing, so we fall back to a local implementation that
+    mirrors its behavior closely enough for axidence's uses.
+    """
+    if hasattr(strax, "set_nan_defaults"):
+        return strax.set_nan_defaults(arr)
+    for name in arr.dtype.names:
+        kind = arr.dtype[name].kind
+        if kind == "f":
+            arr[name] = np.nan
+        elif kind in ("i", "u"):
+            arr[name] = -1
 
 
 def copy_dtype(dtype_reference, required_names):

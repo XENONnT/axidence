@@ -1,3 +1,4 @@
+import numpy as np
 import strax
 import straxen
 
@@ -19,18 +20,40 @@ kind_colors.update(
 )
 
 
+def _dtype_discovery_context():
+    """A fully-wired xenonnt context used only to look up canonical plugin
+    dtypes.
+
+    In straxen 2.2.x the shared `common_config`/`xnt_common_config` does not
+    auto-register a DAQ reader, so a bare Context built from it cannot resolve
+    `peaks` all the way back to `raw_records`. `xenonnt_online` does, and it
+    works on straxen 3.x too, so we use it in both SR1 and main.
+    """
+    return straxen.contexts.xenonnt_online(_database_init=False)
+
+
 def peaks_dtype():
-    st = strax.Context(config=straxen.contexts.common_config, **straxen.contexts.common_opts)
-    data_name = "peaks"
-    PeaksSOM0 = st._get_plugins((data_name,), "0")[data_name]
-    return strax.unpack_dtype(PeaksSOM0.dtype)
+    """Canonical per-peak dtype.
+
+    In modern straxen (3.x) the `Peaks` plugin already covers all per-peak
+    fields downstream salting/pairing needs (including `center_time`,
+    `area_fraction_top`, etc.). In SR1 (straxen 2.2.7) those live on the
+    separate `PeakBasics` plugin, so we merge `peaks ∪ peak_basics` to get a
+    superset that's compatible with both stacks.
+    """
+    st = _dtype_discovery_context()
+    plugins = st._get_plugins(("peaks", "peak_basics"), "0")
+    merged = strax.merged_dtype([plugins["peaks"].dtype, plugins["peak_basics"].dtype])
+    # SR1 strax.merged_dtype returns a descriptor list, modern returns an
+    # np.dtype. Normalize before unpacking.
+    return strax.unpack_dtype(np.dtype(merged))
 
 
 def peak_positions_dtype():
-    st = strax.Context(config=straxen.contexts.common_config, **straxen.contexts.common_opts)
+    st = _dtype_discovery_context()
     data_name = "peak_positions"
-    PeakPositionsNT0 = st._get_plugins((data_name,), "0")[data_name]
-    return strax.unpack_dtype(PeakPositionsNT0.dtype)
+    PeakPositionsPlugin0 = st._get_plugins((data_name,), "0")[data_name]
+    return strax.unpack_dtype(PeakPositionsPlugin0.dtype)
 
 
 shadow_fields = [
@@ -43,9 +66,9 @@ shadow_fields = [
     "x_s2_position_shadow",
     "y_s2_position_shadow",
     "pdf_s2_position_shadow",
-    "nearest_s1",
+    # `nearest_s1` / `nearest_s2` (the area-of-nearest-large-peak fields) were
+    # added to PeakShadow after SR1, so they're omitted in the SR1 release.
     "nearest_dt_s1",
-    "nearest_s2",
     "nearest_dt_s2",
 ]
 
@@ -55,7 +78,13 @@ ambience_fields = [
     "n_s1_before",
     "n_s2_before",
     "n_s2_near",
-    "s_before",
+    # SR1 PeakAmbience emits per-channel `s_*_before` / `s_s2_near` rather than
+    # the consolidated `s_before` field that was introduced later.
+    "s_lh_before",
+    "s_s0_before",
+    "s_s1_before",
+    "s_s2_before",
+    "s_s2_near",
 ]
 
 nearest_triggering_fields = []
@@ -70,7 +99,8 @@ for direction in ["left", "right"]:
     ]
 
 peak_misc_fields = [
-    "proximity_score",
+    # `proximity_score` was added to PeakProximity after SR1; the SR1 release
+    # uses only the n_competing counts.
     "n_competing_left",
     "n_competing",
 ]

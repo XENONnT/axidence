@@ -6,6 +6,8 @@ import pandas as pd
 import strax
 from straxen.test_utils import nt_test_context, nt_test_run_id
 
+import axidence  # noqa: F401  -- registers salt_and_pair_to_context on strax.Context
+
 
 def _write_run_doc(context, run_id, storage, start, end):
     """Function which writes a dummy run document."""
@@ -43,7 +45,9 @@ class TestPairing(TestCase):
             meta["end"],
         )
         self.st.define_run(superrun_name, subrun_ids)
-        self.st.check_superrun()
+        # `check_superrun` was added in strax >= 1.7; skip it on the SR1 strax 1.6.5.
+        if hasattr(self.st, "check_superrun"):
+            self.st.check_superrun()
         plugins = [
             "peaks_paired",
             "event_info_paired",

@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 import strax
 from strax import ExhaustPlugin, DownChunkingPlugin
 import straxen
-from straxen import units, EventBasicsSOM, EventPositions
+from straxen import units, EventBasics, EventPositions
 
 from ...utils import copy_dtype
 from ...samplers import SAMPLERS
@@ -14,7 +14,7 @@ from ...samplers import SAMPLERS
 BOOTSTRAP_DISTRIBUTION = "bootstrap"
 
 
-class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasicsSOM):
+class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasics):
     __version__ = "0.0.3"
     child_plugin = True
     depends_on = "run_meta"

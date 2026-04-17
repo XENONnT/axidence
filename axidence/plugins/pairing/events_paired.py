@@ -4,7 +4,7 @@ from strax import OverlapWindowPlugin
 import straxen
 from straxen import Events
 
-from ...utils import copy_dtype
+from ...utils import copy_dtype, set_nan_defaults
 from ...dtypes import ambience_fields
 
 export, __all__ = strax.exporter()
@@ -81,9 +81,8 @@ class EventInfosPaired(Events):
         required_names += self.ambience_fields
         required_names += [
             "pdf_s2_position_shadow",
-            "nearest_s1",
+            # `nearest_s1` / `nearest_s2` were added to PeakShadow after SR1.
             "nearest_dt_s1",
-            "nearest_s2",
             "nearest_dt_s2",
             "left_dtime",
             "right_dtime",
@@ -134,7 +133,7 @@ class EventInfosPaired(Events):
         result = np.zeros(len(events_paired), dtype=self.dtype)
 
         # assign the additional fields
-        strax.set_nan_defaults(result)
+        set_nan_defaults(result)
 
         # assign the features already in EventInfo
         for q in self.deps["event_info_paired"].dtype_for("event_info_paired").names:

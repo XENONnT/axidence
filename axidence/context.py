@@ -4,7 +4,7 @@ import numpy as np
 import strax
 from strax import LoopPlugin, CutPlugin, CutList
 import straxen
-from straxen import EventBasicsSOM, EventInfoDouble
+from straxen import EventBasics, EventInfoDouble
 
 from axidence import RunMeta, EventsSalting, PeaksSalted
 from axidence import (
@@ -43,7 +43,7 @@ __all__.extend(["default_assign_attributes", "default_assign_appended_attributes
 
 
 default_assign_attributes = {
-    EventBasicsSOM: ["peak_properties", "posrec_save"],
+    EventBasics: ["peak_properties", "posrec_save"],
     EventInfoDouble: ["input_dtype"],
 }
 
@@ -203,19 +203,15 @@ def plugin_factory(
 
             if not issubclass(plugin, LoopPlugin):
 
-                def _fix_output(self, result, start, end, superrun, subruns, _dtype=None):
+                def _fix_output(self, result, start, end, _dtype=None):
                     if self.multi_output and _dtype is None:
                         result = keys_attach_suffix(result, self.suffix)
                         return {
-                            d: super(plugin, self)._fix_output(
-                                result[d], start, end, superrun, subruns, _dtype=d
-                            )
+                            d: super(plugin, self)._fix_output(result[d], start, end, _dtype=d)
                             for d in self.provides
                         }
                     else:
-                        return super()._fix_output(
-                            result, start, end, superrun, subruns, _dtype=_dtype
-                        )
+                        return super()._fix_output(result, start, end, _dtype=_dtype)
 
                 def do_compute(self, chunk_i=None, **kwargs):
                     return super().do_compute(
