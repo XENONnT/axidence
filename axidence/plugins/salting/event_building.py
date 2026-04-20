@@ -2,10 +2,10 @@ import warnings
 from typing import Tuple
 import numpy as np
 import strax
-from strax import ExhaustPlugin
 import straxen
 from straxen import Events, EventBasics
 
+from ..._compat import ExhaustPlugin
 from ...utils import needed_dtype, merge_salted_real, set_nan_defaults
 
 
@@ -63,6 +63,33 @@ class EventsSalted(Events, ExhaustPlugin):
 
     def get_window_size(self):
         return max(super().get_window_size(), self.window * 10)
+
+    def _is_triggering(self, peaks):
+        """Back-port of straxen.Events._is_triggering (added after SR0).
+
+        In SR0 straxen 1.7.x, `Events` doesn't ship this helper — the trigger
+        decision lives inside Events.compute(). Mirror the newer public helper
+        here so EventsSalted.compute can call it.
+        """
+        if hasattr(super(), "_is_triggering"):
+            return super()._is_triggering(peaks)
+        triggering = peaks["area"] > self.trigger_min_area
+        triggering &= peaks["n_competing"] <= self.trigger_max_competing
+        exclude_s1 = getattr(self, "exclude_s1_as_triggering_peaks", True)
+        if exclude_s1:
+            triggering &= peaks["type"] == 2
+        else:
+            # SR0 uses `s1_min_coincidence`; the later name is
+            # `event_s1_min_coincidence`.
+            min_tc = getattr(
+                self,
+                "event_s1_min_coincidence",
+                getattr(self, "s1_min_coincidence", 0),
+            )
+            is_not_s1 = peaks["type"] != 1
+            has_tc_large_enough = peaks["tight_coincidence"] >= min_tc
+            triggering &= is_not_s1 | has_tc_large_enough
+        return triggering
 
     def compute(self, peaks_salted, peaks, start, end):
         if peaks_salted["salt_number"][0] != 0:

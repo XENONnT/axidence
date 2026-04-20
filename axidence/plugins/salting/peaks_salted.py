@@ -27,7 +27,14 @@ class PeaksSalted(PeakBasics):
     )
 
     def refer_dtype(self):
-        return strax.unpack_dtype(strax.to_numpy_dtype(super(PeaksSalted, self).infer_dtype()))
+        # SR0: `PeakBasics` sets `dtype` as a class attribute and does not
+        # define `infer_dtype()`, so `super().infer_dtype()` raises
+        # RuntimeError. Fall back to the class-level attribute.
+        try:
+            parent_dtype = super(PeaksSalted, self).infer_dtype()
+        except RuntimeError:
+            parent_dtype = PeakBasics.dtype
+        return strax.unpack_dtype(strax.to_numpy_dtype(parent_dtype))
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()

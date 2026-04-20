@@ -2,11 +2,21 @@ import warnings
 from immutabledict import immutabledict
 import numpy as np
 import strax
-from strax import Plugin, ExhaustPlugin, DownChunkingPlugin
+from strax import Plugin
+
+from ..._compat import ExhaustPlugin, DownChunkingPlugin
 import straxen
 from straxen import units
 from straxen import PeakProximity
-import GOFevaluation as ge
+
+# GOFevaluation is optional in the SR0 release (the cvmfs sr0_wimp /
+# 2022.06.3 envs don't ship it). It's only used in shadow-matching code
+# paths inside PeaksPaired; importing lazily lets the package import even
+# when GOFevaluation isn't installed.
+try:
+    import GOFevaluation as ge
+except ImportError:
+    ge = None
 
 from ...utils import copy_dtype
 from ...dtypes import peak_positions_dtype
@@ -623,6 +633,13 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         for i, mask in enumerate(n_hits_masks):
             if mask.sum() != 0:
                 if self.apply_shadow_matching:
+                    if ge is None:
+                        raise ImportError(
+                            "apply_shadow_matching=True requires GOFevaluation, "
+                            "which is not installed in this environment. "
+                            "Either `pip install GOFevaluation` or set "
+                            "`apply_shadow_matching=False`."
+                        )
                     # simulate drift time bin by bin
                     shadow_reference, prefix = self.shadow_reference_selection(peaks_salted)
                     truth = self.shadow_matching(
@@ -689,14 +706,18 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
 
         print(f"Number of chunks is {len(slices)}")
 
+        # SR0 release: strax 1.2.3 has no DownChunkingPlugin, so emit a single
+        # concatenated chunk instead of yielding one chunk per slice. Chunk
+        # boundaries spanning the full run are used for the resulting chunk's
+        # [start, end). For the `nt_test_run_id` fixture this is small; on
+        # real data the chunk may exceed chunk_target_size_mb.
+        peaks_pieces = []
+        truth_pieces = []
         for chunk_i in range(len(slices)):
             left_i, right_i = slices[chunk_i]
 
-            _start = start + left_i * self.paring_time_interval
-            _end = start + right_i * self.paring_time_interval
-
             peaks_arrays, truth_arrays = self.build_arrays(
-                _start + self.time_left,
+                start + left_i * self.paring_time_interval + self.time_left,
                 drift_time[left_i:right_i],
                 s1_group_number[left_i:right_i],
                 s2_group_number[left_i:right_i],
@@ -715,25 +736,42 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
             )
             truth_arrays["normalization"] = normalization[left_i:right_i]
 
-            # becareful with all fields assignment after sorting
-            peaks_arrays = np.sort(peaks_arrays, order=("time", "event_number"))
+            peaks_pieces.append(peaks_arrays)
+            truth_pieces.append(truth_arrays)
 
-            # check overlap of peaks
-            n_overlap = (peaks_arrays["time"][1:] - peaks_arrays["endtime"][:-1] < 0).sum()
-            if n_overlap:
-                warnings.warn(f"{n_overlap} peaks overlap")
+        if peaks_pieces:
+            peaks_arrays = np.concatenate(peaks_pieces)
+            truth_arrays = np.concatenate(truth_pieces)
+        else:
+            peaks_arrays = np.zeros(0, dtype=self.dtype["peaks_paired"])
+            truth_arrays = np.zeros(0, dtype=self.dtype["truth_paired"])
 
-            result = dict()
-            result["peaks_paired"] = self.chunk(
-                start=_start, end=_end, data=peaks_arrays, data_type="peaks_paired"
-            )
-            result["truth_paired"] = self.chunk(
-                start=_start, end=_end, data=truth_arrays, data_type="truth_paired"
-            )
-            # chunk size should be less than default chunk size in strax
-            assert result["peaks_paired"].nbytes < self.chunk_target_size_mb * 1e6
+        # becareful with all fields assignment after sorting
+        peaks_arrays = np.sort(peaks_arrays, order=("time", "event_number"))
 
-            yield result
+        # check overlap of peaks
+        n_overlap = (peaks_arrays["time"][1:] - peaks_arrays["endtime"][:-1] < 0).sum()
+        if n_overlap:
+            warnings.warn(f"{n_overlap} peaks overlap")
+
+        # The collapsed chunk's [start, end) must cover all synthetic events.
+        # Pairing-time spacing can push the last event past the real-data run
+        # end, so widen the end to match the data's latest endtime.
+        chunk_start = start
+        chunk_end = end
+        if len(peaks_arrays):
+            chunk_end = max(chunk_end, int(peaks_arrays["endtime"].max()) + 1)
+        if len(truth_arrays):
+            chunk_end = max(chunk_end, int(truth_arrays["endtime"].max()) + 1)
+
+        result = dict()
+        result["peaks_paired"] = self.chunk(
+            start=chunk_start, end=chunk_end, data=peaks_arrays, data_type="peaks_paired"
+        )
+        result["truth_paired"] = self.chunk(
+            start=chunk_start, end=chunk_end, data=truth_arrays, data_type="truth_paired"
+        )
+        return result
 
 
 class PeakProximityPaired(PeakProximity):

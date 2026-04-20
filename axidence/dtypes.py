@@ -2,8 +2,14 @@ import numpy as np
 import strax
 import straxen
 
-from straxen.misc import kind_colors
 
+# `straxen.misc.kind_colors` only exists in straxen >= 2.x. The colours are
+# purely cosmetic (used for `dependency_tree` graphs); on older straxen we
+# silently skip the registration.
+try:
+    from straxen.misc import kind_colors
+except ImportError:  # straxen 1.7.x
+    kind_colors = {}
 
 kind_colors.update(
     {
@@ -87,16 +93,9 @@ ambience_fields = [
     "s_s2_near",
 ]
 
-nearest_triggering_fields = []
-for direction in ["left", "right"]:
-    nearest_triggering_fields += [
-        f"{direction}_dtime",
-        f"{direction}_time",
-        f"{direction}_endtime",
-        f"{direction}_type",
-        f"{direction}_n_competing",
-        f"{direction}_area",
-    ]
+# SR0 release: PeakNearestTriggering doesn't exist in straxen 1.7.x, so the
+# triggering peak fields are dropped entirely.
+nearest_triggering_fields: list = []
 
 peak_misc_fields = [
     # `proximity_score` was added to PeakProximity after SR1; the SR1 release

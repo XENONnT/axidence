@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import strax
-from strax import ExhaustPlugin, DownChunkingPlugin
 import straxen
 from straxen import units, EventBasics, EventPositions
 
+from ..._compat import ExhaustPlugin, DownChunkingPlugin
 from ...utils import copy_dtype
 from ...samplers import SAMPLERS
 
@@ -109,12 +109,19 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.pos_rec_labels = []
 
     def refer_dtype(self):
-        return strax.merged_dtype(
-            [
-                strax.to_numpy_dtype(super(EventPositions, self).infer_dtype()),
-                strax.to_numpy_dtype(super(EventsSalting, self).infer_dtype()),
-            ]
-        )
+        # Merge fields from EventBasics (parent of EventPositions in MRO) and
+        # EventPositions. On SR0 strax/straxen the latter exposes its dtype
+        # only through the class-level `dtype` attribute (its `infer_dtype`
+        # raises), so we read it directly. On SR1 EventPositions defines an
+        # `infer_dtype()` method, so we fall back to super().infer_dtype()
+        # through the MRO.
+        eb_dtype = strax.to_numpy_dtype(super(EventPositions, self).infer_dtype())
+        ep_cls_dtype = getattr(EventPositions, "dtype", None)
+        if ep_cls_dtype is not None and not callable(ep_cls_dtype):
+            ep_dtype = strax.to_numpy_dtype(ep_cls_dtype)
+        else:
+            ep_dtype = strax.to_numpy_dtype(super(EventsSalting, self).infer_dtype())
+        return strax.merged_dtype([eb_dtype, ep_dtype])
 
     def infer_dtype(self):
         dtype_reference = self.refer_dtype()
@@ -325,21 +332,14 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.set_chunk_splitting()
 
     def compute(self, run_meta, start, end):
-        """Copy and assign the salting events into chunk."""
+        """Copy and assign the salting events into chunk.
+
+        SR0 release: strax 1.2.3 has no DownChunkingPlugin, so `compute` must
+        return a single chunk rather than yield many. The chunk-splitting
+        machinery in `set_chunk_splitting` still runs (to compute slices), but
+        we emit the full run as one chunk. This is fine for the
+        `nt_test_run_id` test fixture; on larger runs the chunk may exceed
+        `chunk_target_size_mb` and trigger a strax warning.
+        """
         self.sampling(start, end)
-        for chunk_i in range(len(self.slices)):
-            indices = self.slices[chunk_i]
-
-            if chunk_i == 0:
-                _start = start
-            else:
-                _start = self.events_salting["time"][indices[0]] - self.time_left
-
-            if chunk_i == len(self.slices) - 1:
-                _end = end
-            else:
-                _end = self.events_salting["time"][indices[1] - 1] + self.time_right
-
-            yield self.chunk(
-                start=_start, end=_end, data=self.events_salting[indices[0] : indices[1]]
-            )
+        return self.chunk(start=start, end=end, data=self.events_salting)

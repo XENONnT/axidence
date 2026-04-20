@@ -23,19 +23,20 @@ class TestSalting(TestCase):
 
     def test_salting(self):
         """Test the computing of salting plugins."""
+        # SR0 release: peak_nearest_triggering_salted and event_nearest_triggering_salted
+        # are dropped because the underlying straxen plugins don't exist in
+        # straxen 1.7.x.
         peak_level_plugins = [
             "peaks_salted",
             "peak_proximity_salted",
             "peak_shadow_salted",
             "peak_ambience_salted",
-            "peak_nearest_triggering_salted",
         ]
         event_level_plugins = [
             "events_salted",
             "event_basics_salted",
             "event_shadow_salted",
             "event_ambience_salted",
-            "event_nearest_triggering_salted",
             "events_combine",
             "cuts_event_building_salted",
         ]

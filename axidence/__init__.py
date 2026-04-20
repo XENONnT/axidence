@@ -1,13 +1,22 @@
-__version__ = "0.5.0+sr1"
+__version__ = "0.5.0+sr0"
 
-from . import dtypes
-from .dtypes import *
+# SR0 release: back-port `rundb_retry` support to the old utilix 0.7.x shipped
+# in the sr0_wimp / 2022.06.3 envs so login against an unreachable RunDB API
+# fails fast instead of wasting 110 s of exponential-backoff sleep. Must run
+# before any utilix-backed context is constructed.
+from ._utilix_patch import patch_utilix_rundb_retry as _patch_utilix_rundb_retry
 
-from .utils import *
+_patch_utilix_rundb_retry()
+del _patch_utilix_rundb_retry
 
-from .samplers import *
+from . import dtypes  # noqa: E402
+from .dtypes import *  # noqa: E402, F401, F403
 
-from . import plugins
-from .plugins import *
+from .utils import *  # noqa: E402, F401, F403
 
-from .context import *
+from .samplers import *  # noqa: E402, F401, F403
+
+from . import plugins  # noqa: E402
+from .plugins import *  # noqa: E402, F401, F403
+
+from .context import *  # noqa: E402, F401, F403

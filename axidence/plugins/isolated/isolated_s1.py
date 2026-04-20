@@ -9,6 +9,7 @@ from ...dtypes import peaks_dtype, peak_positions_dtype, correlation_fields
 
 class IsolatedS1(Plugin):
     __version__ = "0.0.0"
+    # SR0 release: peak_nearest_triggering doesn't exist in straxen 1.7.x.
     depends_on = (
         "cut_isolated_s1",
         "peaks",
@@ -17,7 +18,6 @@ class IsolatedS1(Plugin):
         "peak_proximity",
         "peak_shadow",
         "peak_ambience",
-        "peak_nearest_triggering",
     )
     provides = "isolated_s1"
     data_kind = "isolated_s1"

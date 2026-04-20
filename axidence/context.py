@@ -2,25 +2,22 @@ from immutabledict import immutabledict
 from tqdm import tqdm
 import numpy as np
 import strax
-from strax import LoopPlugin, CutPlugin, CutList
+from strax import LoopPlugin, CutPlugin
 import straxen
 from straxen import EventBasics, EventInfoDouble
 
+from axidence._compat import CutList
 from axidence import RunMeta, EventsSalting, PeaksSalted
 from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
     PeakAmbienceSalted,
-    PeakNearestTriggeringSalted,
-    PeakSEScoreSalted,
 )
 from axidence import (
     EventsSalted,
     EventBasicsSOMSalted,
     EventShadowSalted,
     EventAmbienceSalted,
-    EventNearestTriggeringSalted,
-    EventSEScoreSalted,
     EventsCombine,
     MainS1Trigger,
     MainS2Trigger,
@@ -186,7 +183,13 @@ def plugin_factory(
     plugin = st._plugin_class_registry[data_type]
 
     new_plugins = []
-    p = st._Context__get_plugin(run_id="0", data_type=data_type)
+    # strax >= 1.6 exposes the name-mangled single-plugin getter
+    # `_Context__get_plugin`; strax 1.2.3 (SR0) only has the plural
+    # `_get_plugins`. Use whichever is available.
+    if hasattr(st, "_Context__get_plugin"):
+        p = st._Context__get_plugin(run_id="0", data_type=data_type)
+    else:
+        p = st._get_plugins((data_type,), "0")[data_type]
 
     for suffix in suffixes:
         snake = "_" + strax.camel_to_snake(suffix)
@@ -289,6 +292,9 @@ def replication_tree(
 @strax.Context.add_method
 def _salt_to_context(self):
     """Register the salted plugins to the context."""
+    # SR0 release: PeakNearestTriggering / PeakSEScore (and the matching
+    # event-level plugins) are dropped because the underlying straxen
+    # plugins don't exist in straxen 1.7.x.
     self.register(
         (
             RunMeta,
@@ -297,14 +303,10 @@ def _salt_to_context(self):
             PeakProximitySalted,
             PeakShadowSalted,
             PeakAmbienceSalted,
-            PeakNearestTriggeringSalted,
-            PeakSEScoreSalted,
             EventsSalted,
             EventBasicsSOMSalted,
             EventShadowSalted,
             EventAmbienceSalted,
-            EventNearestTriggeringSalted,
-            EventSEScoreSalted,
             EventsCombine,
         )
     )

@@ -1,6 +1,8 @@
-from strax import parse_selection, CutPlugin
+from strax import CutPlugin
 from strax import SaveWhen
 import straxen
+
+from ..._compat import parse_selection
 
 
 class IsolatedS1Mask(CutPlugin):

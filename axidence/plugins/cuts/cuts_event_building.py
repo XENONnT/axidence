@@ -1,4 +1,6 @@
-from strax import CutPlugin, CutList
+from strax import CutPlugin
+
+from ..._compat import CutList
 
 
 class MainS1Trigger(CutPlugin):

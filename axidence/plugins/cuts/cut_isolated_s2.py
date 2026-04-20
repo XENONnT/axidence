@@ -1,8 +1,10 @@
 import strax
-from strax import parse_selection, CutPlugin
+from strax import CutPlugin
 from strax import SaveWhen
 import straxen
 from straxen import Events
+
+from ..._compat import parse_selection
 
 export, __all__ = strax.exporter()
 

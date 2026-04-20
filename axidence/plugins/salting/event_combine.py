@@ -1,16 +1,18 @@
 import strax
 import numpy as np
-from strax import ExhaustPlugin
+
+from ..._compat import ExhaustPlugin
 
 
 class EventsCombine(ExhaustPlugin):
     __version__ = "0.0.0"
+    # SR0 release: drop event_nearest_triggering_salted (the underlying
+    # straxen.EventNearestTriggering doesn't exist in straxen 1.7.x).
     depends_on = (
         "events_salting",
         "event_basics_salted",
         "event_shadow_salted",
         "event_ambience_salted",
-        "event_nearest_triggering_salted",
     )
     provides = "events_combine"
     data_kind = "events_salted"

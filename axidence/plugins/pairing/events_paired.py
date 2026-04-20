@@ -84,8 +84,8 @@ class EventInfosPaired(Events):
             # `nearest_s1` / `nearest_s2` were added to PeakShadow after SR1.
             "nearest_dt_s1",
             "nearest_dt_s2",
-            "left_dtime",
-            "right_dtime",
+            # SR0 release: left_dtime / right_dtime come from
+            # PeakNearestTriggering, which doesn't exist in straxen 1.7.x.
         ]
         required_names += [
             "origin_run_id",
