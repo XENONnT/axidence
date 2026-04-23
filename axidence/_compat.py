@@ -97,12 +97,34 @@ if hasattr(strax, "CutList"):
 else:
 
     class CutList(strax.MergeOnlyPlugin):  # type: ignore[no-redef]
-        """Back-port of strax.CutList (strax>=1.4)."""
+        """Back-port of strax.CutList (strax>=1.4).
+
+        strax 1.2.3's `deregister_plugins_with_missing_dependencies` and
+        other machinery introspect `.depends_on` on the **class** (not the
+        instance). The modern strax CutList exposes `depends_on` as a
+        `@property`, which on class access returns the property descriptor
+        rather than a tuple — SR0 strax then trips on
+        `strax.to_str_tuple(<property>)`. Resolve `depends_on` eagerly in
+        `__init_subclass__` so every CutList subclass ends up with a plain
+        tuple class attribute by the time strax looks at it.
+        """
 
         __version__ = "0.0.0"
         save_when = strax.SaveWhen.TARGET
         cuts = ()
-        _depends_on = ()
+        depends_on = ()
+
+        def __init_subclass__(cls, **kwargs):
+            super().__init_subclass__(**kwargs)
+            # If the subclass declared `cuts` but not an explicit
+            # `depends_on`, materialize it from `cuts[*].provides` now.
+            cls_vars = cls.__dict__
+            has_own_depends_on = "depends_on" in cls_vars and cls_vars["depends_on"]
+            if cls.cuts and not has_own_depends_on:
+                deps = []
+                for c in cls.cuts:
+                    deps.extend(strax.to_str_tuple(c.provides))
+                cls.depends_on = tuple(deps)
 
         def infer_dtype(self):
             dtype = super().infer_dtype()
@@ -127,16 +149,3 @@ else:
             )
             cuts_joint[self.accumulated_cuts_string] = get_accumulated_bool(cuts)
             return cuts_joint
-
-        @property  # type: ignore[override]
-        def depends_on(self):  # noqa: F811
-            if not len(self._depends_on):
-                deps = []
-                for c in self.cuts:
-                    deps.extend(strax.to_str_tuple(c.provides))
-                self._depends_on = tuple(deps)
-            return self._depends_on
-
-        @depends_on.setter
-        def depends_on(self, str_or_tuple):
-            self._depends_on = strax.to_str_tuple(str_or_tuple)
