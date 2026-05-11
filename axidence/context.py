@@ -201,6 +201,25 @@ def plugin_factory(
                 # so we assign the dtype manually and raise error in infer_dtype method
                 raise RuntimeError
 
+            def setup(self):
+                # In the replicated tree, every entry in `depends_on` carries
+                # `self.suffix` (e.g. "_paired" / "_salted"), so `self.deps` is
+                # also keyed by suffixed names. Some upstream plugins (notably
+                # cutax `S1SingleScatter`) look up sibling cut instances via
+                # the unsuffixed names inside their own `setup()`, which raises
+                # KeyError under the replicated pipeline.
+                #
+                # Shadow `self.deps` on the instance with a suffix-stripped view
+                # only for the duration of the original `setup()`, then restore
+                # the original mapping so the rest of strax keeps using the
+                # suffixed keys it expects.
+                original_deps = self.deps
+                try:
+                    self.deps = keys_detach_suffix(original_deps, self.suffix)
+                    super().setup()
+                finally:
+                    self.deps = original_deps
+
             if not issubclass(plugin, LoopPlugin):
 
                 def _fix_output(self, result, start, end, superrun, subruns, _dtype=None):
@@ -235,8 +254,15 @@ def plugin_factory(
 
             if issubclass(plugin, CutPlugin):
 
-                def cut_by(self, **kwargs):
-                    return super().cut_by(**keys_detach_suffix(kwargs, self.suffix))
+                def cut_by(self, *args, **kwargs):
+                    # strax always calls `cut_by` with kwargs whose names need
+                    # to be suffix-stripped to match the original plugin's
+                    # signature. But upstream cuts (e.g. cutax `S1SingleScatter`)
+                    # also call `cut_by(events_dict)` positionally on dependent
+                    # cut instances; allow those calls to pass through untouched.
+                    if kwargs:
+                        kwargs = keys_detach_suffix(kwargs, self.suffix)
+                    return super().cut_by(*args, **kwargs)
 
         new_plugin = assign_plugin_attributes(
             new_plugin,
