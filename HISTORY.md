@@ -1,3 +1,10 @@
+v0.4.1 / 2026-07-22
+-------------------
+* Fix cut_by signature in plugin factory to accept positional arguments by @dachengx in https://github.com/XENONnT/axidence/pull/112
+
+**Full Changelog**: https://github.com/XENONnT/axidence/compare/v0.4.0...v0.4.1
+
+
 v0.4.0 / 2025-05-18
 -------------------
 * Be compatible with https://github.com/XENONnT/straxen/pull/1604 by @dachengx in https://github.com/XENONnT/axidence/pull/106
