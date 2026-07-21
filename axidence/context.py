@@ -235,8 +235,8 @@ def plugin_factory(
 
             if issubclass(plugin, CutPlugin):
 
-                def cut_by(self, **kwargs):
-                    return super().cut_by(**keys_detach_suffix(kwargs, self.suffix))
+                def cut_by(self, *args, **kwargs):
+                    return super().cut_by(*args, **keys_detach_suffix(kwargs, self.suffix))
 
         new_plugin = assign_plugin_attributes(
             new_plugin,

@@ -48,12 +48,12 @@ jobs:
           python -m pip install pytest coverage coveralls
 
       - name: Install requirements
-        run: pip install git+https://github.com/XENONnT/base_environment.git --force-reinstall
+        run: pip install git+https://github.com/XENONnT/base_environment.git@el8.2026.02.2 --force-reinstall
 
-      - name: Install strax and straxen
-        run: |
-          pip install git+https://github.com/AxFoundation/strax.git --force-reinstall
-          pip install git+https://github.com/XENONnT/straxen.git --force-reinstall
+      # - name: Install strax and straxen
+      #   run: |
+      #     pip install git+https://github.com/AxFoundation/strax.git --force-reinstall
+      #     pip install git+https://github.com/XENONnT/straxen.git --force-reinstall
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.10.0
