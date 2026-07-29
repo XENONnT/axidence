@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from scipy.interpolate import interp1d
 import strax
@@ -252,6 +253,57 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
     def compute(self, run_meta, start, end):
         """Copy and assign the salting events into chunk."""
         self.sampling(start, end)
+        for chunk_i in range(len(self.slices)):
+            indices = self.slices[chunk_i]
+
+            if chunk_i == 0:
+                _start = start
+            else:
+                _start = self.events_salting["time"][indices[0]] - self.time_left
+
+            if chunk_i == len(self.slices) - 1:
+                _end = end
+            else:
+                _end = self.events_salting["time"][indices[1] - 1] + self.time_right
+
+            yield self.chunk(
+                start=_start, end=_end, data=self.events_salting[indices[0] : indices[1]]
+            )
+
+
+class VetoAwareEventSalting(EventsSalting):
+    __version__ = "0.0.2"
+    child_plugin = True
+    depends_on = ("run_meta", "veto_intervals")  # type: ignore[assignment]
+    provides = "events_salting"
+    data_kind = "events_salting"
+
+    def setup(self):
+        super().setup()
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def compute(self, run_meta, veto_intervals, start, end):
+        """Copy and assign the salting events into chunk."""
+        self.sampling(start, end)
+
+        # Remove events that fall within veto intervals
+        if len(veto_intervals) > 0:
+            mask = np.ones(self.n_events, dtype=bool)
+            for veto_interval in veto_intervals:
+                v_start, v_end = veto_interval["time"], veto_interval["endtime"]
+                mask &= ~(
+                    (self.events_salting["time"] >= v_start)
+                    & (self.events_salting["time"] <= v_end)
+                )
+            self.logger.debug(
+                f"Vetoed {self.n_events - np.sum(mask)} salting events due to veto intervals."
+            )
+            self.events_salting = self.events_salting[mask]
+            self.events_salting["salt_number"] -= self.events_salting[0][
+                "salt_number"
+            ]  # Re-index salt_number
+            self.n_events = len(self.events_salting)
+
         for chunk_i in range(len(self.slices)):
             indices = self.slices[chunk_i]
 

@@ -6,7 +6,7 @@ from strax import LoopPlugin, CutPlugin, CutList
 import straxen
 from straxen import EventBasicsSOM, EventInfoDouble
 
-from axidence import RunMeta, EventsSalting, PeaksSalted
+from axidence import RunMeta, EventsSalting, VetoAwareEventSalting, PeaksSalted
 from axidence import (
     PeakProximitySalted,
     PeakShadowSalted,
@@ -291,12 +291,13 @@ def replication_tree(
 
 
 @strax.Context.add_method
-def _salt_to_context(self):
+def _salt_to_context(self, veto_aware=False):
     """Register the salted plugins to the context."""
+    VetoAwareSaltingPlugin = VetoAwareEventSalting if veto_aware else EventsSalting
     self.register(
         (
             RunMeta,
-            EventsSalting,
+            VetoAwareSaltingPlugin,
             PeaksSalted,
             PeakProximitySalted,
             PeakShadowSalted,
@@ -333,19 +334,19 @@ def _pair_to_context(self):
 
 
 @strax.Context.add_method
-def salt_to_context(st, assign_attributes=None, tqdm_disable=True):
+def salt_to_context(st, assign_attributes=None, tqdm_disable=True, veto_aware=False):
     """Register the salted plugins to the context."""
     st.register((MainS1Trigger, MainS2Trigger, EventBuilding))
     st.replication_tree(
         suffixes=["Salted"], assign_attributes=assign_attributes, tqdm_disable=tqdm_disable
     )
-    st._salt_to_context()
+    st._salt_to_context(veto_aware=veto_aware)
 
 
 @strax.Context.add_method
-def salt_and_pair_to_context(st, assign_attributes=None, tqdm_disable=True):
+def salt_and_pair_to_context(st, assign_attributes=None, tqdm_disable=True, veto_aware=False):
     """Register the salted and paired plugins to the context."""
     st.register((MainS1Trigger, MainS2Trigger, EventBuilding))
     st.replication_tree(assign_attributes=assign_attributes, tqdm_disable=tqdm_disable)
-    st._salt_to_context()
+    st._salt_to_context(veto_aware=veto_aware)
     st._pair_to_context()

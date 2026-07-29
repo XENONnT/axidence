@@ -1,19 +1,11 @@
 import pytest
-from unittest import TestCase
 from straxen.test_utils import nt_test_context, nt_test_run_id
 
 
 @pytest.mark.usefixtures("rm_strax_data")
-class TestSalting(TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.run_id = nt_test_run_id
-        # TODO: xenonnt_online should be used here
-        cls.st = nt_test_context("xenonnt")
-        cls.st.salt_to_context()
-
-    def test_salting(self):
-        """Test the computing of salting plugins."""
+class TestSalting:
+    @pytest.mark.parametrize("veto_aware", [False, True])
+    def test_salting(self, veto_aware):
         peak_level_plugins = [
             "peaks_salted",
             "peak_proximity_salted",
@@ -30,7 +22,11 @@ class TestSalting(TestCase):
             "events_combine",
             "cuts_event_building_salted",
         ]
+        self.run_id = nt_test_run_id
+        self.st = nt_test_context("xenonnt")
+        self.st.salt_to_context(veto_aware=veto_aware)
         self.st.make(self.run_id, "run_meta", save="run_meta")
         self.st.make(self.run_id, "events_salting", save="events_salting")
+
         for p in peak_level_plugins + event_level_plugins:
             self.st.make(self.run_id, p, save=p)
