@@ -1,4 +1,7 @@
+import warnings
+
 import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
 import strax
 from strax import ExhaustPlugin, DownChunkingPlugin
@@ -8,9 +11,11 @@ from straxen import units, EventBasicsSOM, EventPositions
 from ...utils import copy_dtype
 from ...samplers import SAMPLERS
 
+BOOTSTRAP_DISTRIBUTION = "bootstrap"
+
 
 class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasicsSOM):
-    __version__ = "0.0.2"
+    __version__ = "0.0.3"
     child_plugin = True
     depends_on = "run_meta"
     provides = "events_salting"
@@ -83,6 +88,16 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         help="Assigned area fraction top for S2",
     )
 
+    bootstrap_csv = straxen.URLConfig(
+        default=None,
+        type=(str, pd.DataFrame, None),
+        help=(
+            "Path (or pre-loaded DataFrame) of a CSV with columns 's1_area' and 's2_area' "
+            "to bootstrap salted (S1, S2) area pairs from. Required when both "
+            "s1_distribution and s2_distribution are 'bootstrap'."
+        ),
+    )
+
     n_drift_time_window = straxen.URLConfig(
         default=5,
         type=int,
@@ -126,6 +141,60 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
             self.hits_salting_rate = list(self.salting_rate)
         else:
             self.hits_salting_rate = [self.salting_rate] * 2
+
+        s1_is_bootstrap = self.s1_distribution == BOOTSTRAP_DISTRIBUTION
+        s2_is_bootstrap = self.s2_distribution == BOOTSTRAP_DISTRIBUTION
+        self._bootstrap_mode = s1_is_bootstrap or s2_is_bootstrap
+        if self._bootstrap_mode:
+            if not (s1_is_bootstrap and s2_is_bootstrap):
+                raise ValueError(
+                    "Bootstrap salting requires BOTH s1_distribution and s2_distribution "
+                    f"to be {BOOTSTRAP_DISTRIBUTION!r}; got "
+                    f"s1_distribution={self.s1_distribution!r}, "
+                    f"s2_distribution={self.s2_distribution!r}."
+                )
+            if self.bootstrap_csv is None:
+                raise ValueError(
+                    "bootstrap_csv must be set when s1_distribution and s2_distribution "
+                    f"are {BOOTSTRAP_DISTRIBUTION!r}."
+                )
+            self._bootstrap_pool = self._load_bootstrap_pool(self.bootstrap_csv)
+
+    def _load_bootstrap_pool(self, csv):
+        """Load (s1_area, s2_area) pairs to bootstrap from."""
+        if isinstance(csv, pd.DataFrame):
+            df = csv
+        else:
+            df = pd.read_csv(csv)
+        for col in ("s1_area", "s2_area"):
+            if col not in df.columns:
+                raise ValueError(
+                    f"bootstrap_csv is missing required column {col!r}; "
+                    f"got columns {list(df.columns)}"
+                )
+        pool = df[["s1_area", "s2_area"]].to_numpy(dtype=np.float32)
+        finite = np.isfinite(pool).all(axis=1)
+        pool = pool[finite]
+        if len(pool) == 0:
+            raise ValueError(
+                "bootstrap_csv contains no rows with finite s1_area and s2_area values."
+            )
+        s1_min, s1_max = float(self.s1_area_range[0]), float(self.s1_area_range[1])
+        s2_min, s2_max = float(self.s2_area_range[0]), float(self.s2_area_range[1])
+        out_of_range = (
+            (pool[:, 0] < s1_min)
+            | (pool[:, 0] > s1_max)
+            | (pool[:, 1] < s2_min)
+            | (pool[:, 1] > s2_max)
+        ).sum()
+        if out_of_range:
+            warnings.warn(
+                f"{out_of_range}/{len(pool)} bootstrap rows fall outside the configured "
+                f"s1_area_range={self.s1_area_range} / s2_area_range={self.s2_area_range}; "
+                "the ranges are ignored in bootstrap mode but this may indicate a "
+                "config/data mismatch."
+            )
+        return pool
 
     def init_rng(self):
         """Initialize the random number generator."""
@@ -226,17 +295,23 @@ class EventsSalting(ExhaustPlugin, DownChunkingPlugin, EventPositions, EventBasi
         self.events_salting["s1_center_time"] = time - self.events_salting["drift_time"]
         self.events_salting["s2_center_time"] = time
 
-        s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
-        s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
-        self.events_salting["s1_area"] = self.sample_area(
-            self.s1_distribution, s1_area_range, self.n_events, self.rng
-        )
-        self.events_salting["s2_area"] = self.sample_area(
-            self.s2_distribution, s2_area_range, self.n_events, self.rng
-        )
-        # to prevent numerical errors
-        self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
-        self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
+        if self._bootstrap_mode:
+            indices = self.rng.choice(len(self._bootstrap_pool), size=self.n_events, replace=True)
+            self.events_salting["s1_area"] = self._bootstrap_pool[indices, 0]
+            self.events_salting["s2_area"] = self._bootstrap_pool[indices, 1]
+        else:
+            s1_area_range = (float(self.s1_area_range[0]), float(self.s1_area_range[1]))
+            s2_area_range = (float(self.s2_area_range[0]), float(self.s2_area_range[1]))
+            self.events_salting["s1_area"] = self.sample_area(
+                self.s1_distribution, s1_area_range, self.n_events, self.rng
+            )
+            self.events_salting["s2_area"] = self.sample_area(
+                self.s2_distribution, s2_area_range, self.n_events, self.rng
+            )
+
+            # to prevent numerical errors
+            self.events_salting["s1_area"] = np.clip(self.events_salting["s1_area"], *s1_area_range)
+            self.events_salting["s2_area"] = np.clip(self.events_salting["s2_area"], *s2_area_range)
 
         self.events_salting["s2_area_fraction_top"] = self.sample_area_fraction_top(
             self.events_salting["s2_area"],
