@@ -3,7 +3,6 @@ import straxen
 
 from straxen.misc import kind_colors
 
-
 kind_colors.update(
     {
         "run_meta": "#ffff00",
