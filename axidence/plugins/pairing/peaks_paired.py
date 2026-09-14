@@ -4,7 +4,7 @@ import numpy as np
 import strax
 from strax import Plugin
 
-from ..._compat import ExhaustPlugin, DownChunkingPlugin
+from ..._compat import ExhaustPlugin, DownChunkingPlugin, HAS_HYPERRUN
 import straxen
 from straxen import units
 from straxen import PeakProximity
@@ -35,7 +35,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
     rechunk_on_save = immutabledict(zip(provides, [False, True]))
-    allow_superrun = True
+    allow_hyperrun = True
 
     pairing_seed = straxen.URLConfig(
         default=None,
@@ -160,6 +160,13 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
         return dict(peaks_paired=peaks_dtype, truth_paired=truth_dtype)
 
     def setup(self, prepare=True):
+        if not HAS_HYPERRUN:
+            warnings.warn(
+                f"strax {strax.__version__} has no hyperrun support, so pairing cannot run "
+                "across the subruns of a superrun: strax makes peaks_paired subrun by subrun and "
+                "concatenates the pieces, isolated S1s and S2s are only paired within each run, "
+                "and the shadow-matching statistics are per run."
+            )
         self.min_drift_time = int(self.min_drift_length / self.electron_drift_velocity)
         self.max_drift_time = int(self.max_drift_length / self.electron_drift_velocity)
         if self.pairing_seed is None:
@@ -780,7 +787,7 @@ class PeakProximityPaired(PeakProximity):
     provides = "peak_proximity_paired"
     data_kind = "peaks_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     # `use_origin_proximity_score` removed in the SR1 release because
     # SR1 PeakProximity does not expose `proximity_score`.
@@ -849,7 +856,7 @@ class PeakPositionsPaired(Plugin):
     depends_on = "peaks_paired"
     provides = "peak_positions_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     def infer_dtype(self):
         return peak_positions_dtype()

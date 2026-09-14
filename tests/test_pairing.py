@@ -30,7 +30,12 @@ class TestPairing(TestCase):
         cls.st.salt_and_pair_to_context()
 
     def test_pairing(self):
-        """Test the computing of pairing plugins."""
+        """Test the computing of pairing plugins on a superrun.
+
+        strax 1.2.3 (SR0) has no hyperrun support: a superrun target that is not stored yet is
+        made subrun by subrun and the pieces are concatenated, so pairing is per run. Making the
+        paired plugins for the superrun therefore also has to produce the subrun copies.
+        """
         superrun_name = "_" + self.run_id
         subrun_ids = [self.run_id]
         data_type = "event_basics"
@@ -45,7 +50,7 @@ class TestPairing(TestCase):
             meta["end"],
         )
         self.st.define_run(superrun_name, subrun_ids)
-        # `check_superrun` was added in strax >= 1.7; skip it on the SR1 strax 1.6.5.
+        # `check_superrun` / `check_hyperrun` were added in later strax versions.
         if hasattr(self.st, "check_superrun"):
             self.st.check_superrun()
         plugins = [
@@ -54,4 +59,10 @@ class TestPairing(TestCase):
             "cut_pairing_exists",
         ]
         for p in plugins:
-            self.st.make(self.run_id, p, save=p)
+            # a single-subrun superrun relies on the `is_stored` shim in axidence._compat
+            self.st.make(superrun_name, p, save=p)
+            assert self.st.is_stored(superrun_name, p)
+            assert self.st.is_stored(self.run_id, p), "strax should have made the subrun first"
+            assert len(self.st.get_array(superrun_name, p)) == len(
+                self.st.get_array(self.run_id, p)
+            )

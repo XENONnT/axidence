@@ -16,6 +16,8 @@ import numpy as np
 import strax
 
 __all__ = [
+    "HAS_HYPERRUN",
+    "patch_context_is_stored",
     "ExhaustPlugin",
     "DownChunkingPlugin",
     "CutList",
@@ -24,6 +26,41 @@ __all__ = [
     "get_accumulated_bool",
 ]
 
+
+# strax >= 1.5 can compute `allow_hyperrun = True` plugins once over a whole
+# "__"-prefixed hyperrun with the subruns' data concatenated. strax 1.2.3 (SR0)
+# has no such mechanism: any "_"-prefixed superrun target that is not stored
+# yet is made subrun by subrun and the pieces are concatenated afterwards.
+HAS_HYPERRUN = hasattr(strax.Plugin, "allow_hyperrun")
+
+
+def patch_context_is_stored():
+    """Let `strax.Context.is_stored` accept a list/tuple of run ids.
+
+    strax 1.2.3's `Context.make` forwards the *original* `run_id` argument to
+    `is_stored`, so making a superrun whose `sub_run_spec` has a single subrun
+    (strax calls `make([subrun], target)` internally) crashes with
+    `AttributeError: 'list' object has no attribute 'startswith'`. Superruns
+    with two or more subruns go through `strax.multi_run` and are unaffected.
+    Later strax versions handle this themselves, so the patch is a no-op there.
+    """
+    if HAS_HYPERRUN:
+        return
+    original = strax.Context.is_stored
+    if getattr(original, "_axidence_accepts_run_list", False):
+        return
+
+    def is_stored(self, run_id, target, **kwargs):
+        if isinstance(run_id, (list, tuple)):
+            return all(original(self, r, target, **kwargs) for r in run_id)
+        return original(self, run_id, target, **kwargs)
+
+    is_stored._axidence_accepts_run_list = True
+    is_stored.__doc__ = original.__doc__
+    strax.Context.is_stored = is_stored
+
+
+patch_context_is_stored()
 
 if hasattr(strax, "set_nan_defaults"):
     set_nan_defaults = strax.set_nan_defaults

@@ -45,7 +45,7 @@ default_assign_attributes = {
 }
 
 
-allow_superrun_suffix = ["Paired"]
+allow_hyperrun_suffix = ["Paired"]
 
 
 default_assign_appended_attributes: dict = {}
@@ -152,8 +152,8 @@ def assign_plugin_attributes(
     if hasattr(old_instance, "loop_over"):
         new_plugin.loop_over = old_instance.loop_over + snake
 
-    if suffix in allow_superrun_suffix and new_plugin.depends_on:
-        new_plugin.allow_superrun = True
+    if suffix in allow_hyperrun_suffix:
+        new_plugin.allow_hyperrun = True
 
     return new_plugin
 
