@@ -1,3 +1,4 @@
+import numba
 import numpy as np
 import strax
 from straxen import (
@@ -12,7 +13,7 @@ from ...utils import copy_dtype
 
 
 class PeakProximitySalted(PeakProximity):
-    __version__ = "0.0.0"
+    __version__ = "0.0.1"
     child_plugin = True
     depends_on = ("peaks_salted", "peak_basics", "peak_positions")
     provides = "peak_proximity_salted"
@@ -36,47 +37,50 @@ class PeakProximitySalted(PeakProximity):
         return dtype
 
     def compute(self, peaks_salted, peaks):
-        # SR1 PeakProximity has no `compute_proximity(peaks, current_peak)` helper.
-        # Build a sorted union of (real peaks + salted peaks), run the SR1 compute
-        # on it, then pick out the salted rows in their original order.
-        n_salted = len(peaks_salted)
-        if n_salted == 0:
-            return np.zeros(0, dtype=self.dtype)
+        # SR1 PeakProximity has no `compute_proximity(peaks, current_peak)` helper,
+        # so count the competing *real* peaks around each salted peak ourselves.
+        # Two conventions matter here and both follow SR1 straxen 2.2.7:
+        #   * `PeakProximity.find_n_competing` does NOT count the peak itself
+        #     (modern straxen does, which is why `main` adds one), so no +1 here;
+        #   * only real peaks compete, the salted partner peak (S1 of a salted S2
+        #     or vice versa) is not counted, as in axidence v0.3.x.
+        # `Events._is_triggering` in SR1 cuts on `n_competing <= trigger_max_competing`,
+        # so any offset here directly biases which salted S2s can trigger.
+        if "proximity_score" in self.dtype.names:
+            raise NotImplementedError(
+                "proximity_score is not available on the SR1 (straxen 2.2.x) stack."
+            )
+        windows = strax.touching_windows(peaks, peaks_salted, window=self.nearby_window)
+        n_left, n_tot = self.find_n_competing_salted(
+            peaks, peaks_salted, windows, fraction=self.min_area_fraction
+        )
+        return dict(
+            time=peaks_salted["time"],
+            endtime=strax.endtime(peaks_salted),
+            n_competing_left=n_left,
+            n_competing=n_tot,
+            salt_number=peaks_salted["salt_number"],
+        )
 
-        merged_dtype = [
-            ("time", np.int64),
-            ("endtime", np.int64),
-            ("area", np.float32),
-        ]
-        merged = np.empty(len(peaks) + n_salted, dtype=merged_dtype)
-        merged["time"][: len(peaks)] = peaks["time"]
-        merged["endtime"][: len(peaks)] = peaks["endtime"]
-        merged["area"][: len(peaks)] = peaks["area"]
-        merged["time"][len(peaks) :] = peaks_salted["time"]
-        merged["endtime"][len(peaks) :] = peaks_salted["endtime"]
-        merged["area"][len(peaks) :] = peaks_salted["area"]
-        order = np.argsort(merged["time"])
-        merged = merged[order]
-        # invert the permutation so we can recover salted-row positions in the sort
-        inv = np.empty_like(order)
-        inv[order] = np.arange(len(order))
-        salted_in_sorted = inv[len(peaks) :]
+    @staticmethod
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def find_n_competing_salted(peaks, peaks_salted, windows, fraction):
+        """Number of real peaks larger than `fraction` of each salted peak's area within its
+        touching window, split into (left of the salted peak, total)."""
+        n_left = np.zeros(len(peaks_salted), dtype=np.int32)
+        n_tot = n_left.copy()
+        areas = peaks["area"]
+        areas_salted = peaks_salted["area"]
 
-        proximity_dict = super().compute(merged)
+        dig = np.searchsorted(peaks["center_time"], peaks_salted["center_time"])
 
-        result = np.zeros(n_salted, dtype=self.dtype)
-        result["time"] = peaks_salted["time"]
-        result["endtime"] = peaks_salted["endtime"]
-        for name in result.dtype.names:
-            if name in ("time", "endtime", "salt_number"):
-                continue
-            if name in proximity_dict:
-                result[name] = np.asarray(proximity_dict[name])[salted_in_sorted]
-        result["salt_number"] = peaks_salted["salt_number"]
-        # here the plus one accounts for the peak itself
-        if "n_competing" in result.dtype.names:
-            result["n_competing"] += 1
-        return result
+        for i, peak in enumerate(peaks_salted):
+            left_i, right_i = windows[i]
+            threshold = areas_salted[i] * fraction
+            n_left[i] = np.sum(areas[left_i : dig[i]] > threshold)
+            n_tot[i] = n_left[i] + np.sum(areas[dig[i] : right_i] > threshold)
+
+        return n_left, n_tot
 
 
 class PeakShadowSalted(PeakShadow):

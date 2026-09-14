@@ -30,8 +30,15 @@ class TestPairing(TestCase):
         cls.st.salt_and_pair_to_context()
 
     def test_pairing(self):
-        """Test the computing of pairing plugins."""
-        superrun_name = "_" + self.run_id
+        """Test the computing of pairing plugins on a hyperrun.
+
+        On the SR1 strax (1.6.5) a run spanning several subruns is a "hyperrun" named with a
+        double underscore, and only plugins with `allow_hyperrun = True` are computed once over
+        the concatenated subruns. Pairing must run on the hyperrun (so isolated S1/S2 from all
+        subruns can be paired), so we make the paired plugins for the hyperrun and check that
+        strax did not fall back to making them subrun by subrun.
+        """
+        hyperrun_name = "__" + self.run_id
         subrun_ids = [self.run_id]
         data_type = "event_basics"
         self.st.make(self.run_id, data_type, save=data_type)
@@ -44,14 +51,17 @@ class TestPairing(TestCase):
             meta["start"],
             meta["end"],
         )
-        self.st.define_run(superrun_name, subrun_ids)
-        # `check_superrun` was added in strax >= 1.7; skip it on the SR1 strax 1.6.5.
-        if hasattr(self.st, "check_superrun"):
-            self.st.check_superrun()
+        self.st.define_run(hyperrun_name, subrun_ids)
+        self.st.check_hyperrun()
         plugins = [
             "peaks_paired",
             "event_info_paired",
             "cut_pairing_exists",
         ]
         for p in plugins:
-            self.st.make(self.run_id, p, save=p)
+            assert self.st._plugin_class_registry[p].allow_hyperrun
+            self.st.make(hyperrun_name, p, save=p)
+            assert self.st.is_stored(hyperrun_name, p)
+            # if the plugin had been made subrun by subrun instead, strax would have
+            # stored the subrun's copy first
+            assert not self.st.is_stored(self.run_id, p)

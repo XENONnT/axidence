@@ -25,7 +25,7 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     data_kind = immutabledict(zip(provides, provides))
     save_when = immutabledict(zip(provides, [strax.SaveWhen.EXPLICIT, strax.SaveWhen.ALWAYS]))
     rechunk_on_save = immutabledict(zip(provides, [False, True]))
-    allow_superrun = True
+    allow_hyperrun = True
 
     pairing_seed = straxen.URLConfig(
         default=None,
@@ -742,7 +742,7 @@ class PeakProximityPaired(PeakProximity):
     provides = "peak_proximity_paired"
     data_kind = "peaks_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     # `use_origin_proximity_score` removed in the SR1 release because
     # SR1 PeakProximity does not expose `proximity_score`.
@@ -811,7 +811,7 @@ class PeakPositionsPaired(Plugin):
     depends_on = "peaks_paired"
     provides = "peak_positions_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     def infer_dtype(self):
         return peak_positions_dtype()

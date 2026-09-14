@@ -18,7 +18,7 @@ class EventsForcePaired(OverlapWindowPlugin):
     provides = "events_paired"
     data_kind = "events_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     paring_time_interval = straxen.URLConfig(
         default=int(1e8),
@@ -59,7 +59,7 @@ class EventInfosPaired(Events):
     provides = "event_infos_paired"
     data_kind = "events_paired"
     save_when = strax.SaveWhen.EXPLICIT
-    allow_superrun = True
+    allow_hyperrun = True
 
     ambience_fields = straxen.URLConfig(
         default=ambience_fields,
