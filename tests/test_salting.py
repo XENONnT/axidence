@@ -2,6 +2,8 @@ import pytest
 from unittest import TestCase
 from straxen.test_utils import nt_test_context, nt_test_run_id
 
+import axidence  # noqa: F401  -- registers salt_to_context on strax.Context
+
 
 @pytest.mark.usefixtures("rm_strax_data")
 class TestSalting(TestCase):
@@ -29,6 +31,9 @@ class TestSalting(TestCase):
             "event_nearest_triggering_salted",
             "events_combine",
             "cuts_event_building_salted",
+            # merge-only clone: its dtype must be inferred from the salted
+            # dependencies (which carry the extra salt_number fields)
+            "event_info_salted",
         ]
         self.st.make(self.run_id, "run_meta", save="run_meta")
         self.st.make(self.run_id, "events_salting", save="events_salting")
