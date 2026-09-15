@@ -197,12 +197,31 @@ def plugin_factory(
         class new_plugin(plugin):
             suffix = snake
 
-            def infer_dtype(self):
-                # some plugins like PulseProcessing uses self.deps in infer_dtype,
-                # which will cause error because the dependency tree changes
-                # https://github.com/XENONnT/straxen/blob/b4910e560a6a7f11288a4368816e692c26f8bc73/straxen/plugins/records/records.py#L142
-                # so we assign the dtype manually and raise error in infer_dtype method
-                raise RuntimeError
+            if (
+                issubclass(plugin, strax.MergeOnlyPlugin)
+                and getattr(plugin, "infer_dtype", None) is strax.MergeOnlyPlugin.infer_dtype
+            ):
+                # Plain merge-only plugins (e.g. straxen.EventInfo) just concatenate
+                # the dtypes of their dependencies. The clone's dependencies are the
+                # suffixed ones, and hand-written plugins such as EventBasicsSOMSalted
+                # add fields (e.g. `salt_number`) that the original dtype does not have,
+                # so a frozen copy of the original dtype makes strax reject the clone's
+                # output (`PluginGaveWrongOutput`). Let strax merge the dtypes of the
+                # actual (suffixed) dependencies instead; `fix_dtype` prefers this over
+                # the class attribute copied by `assign_plugin_attributes`.
+                # Cut lists override `infer_dtype` and keep the frozen, renamed dtype.
+
+                def infer_dtype(self):
+                    return strax.MergeOnlyPlugin.infer_dtype(self)
+
+            else:
+
+                def infer_dtype(self):
+                    # some plugins like PulseProcessing uses self.deps in infer_dtype,
+                    # which will cause error because the dependency tree changes
+                    # https://github.com/XENONnT/straxen/blob/b4910e560a6a7f11288a4368816e692c26f8bc73/straxen/plugins/records/records.py#L142
+                    # so we assign the dtype manually and raise error in infer_dtype method
+                    raise RuntimeError
 
             if not issubclass(plugin, LoopPlugin):
 
