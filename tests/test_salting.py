@@ -38,6 +38,9 @@ class TestSalting(TestCase):
             "event_nearest_triggering_salted",
             "events_combine",
             "cuts_event_building_salted",
+            # merge-only clone: its dtype must be inferred from the salted
+            # dependencies (which carry the extra salt_number fields)
+            "event_info_salted",
         ]
         self.st.make(self.run_id, "run_meta", save="run_meta")
         self.st.make(self.run_id, "events_salting", save="events_salting")
