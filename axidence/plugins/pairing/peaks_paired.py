@@ -230,7 +230,6 @@ class PeaksPaired(ExhaustPlugin, DownChunkingPlugin):
     def shadow_reference_selection(self, peaks_salted):
         """Select the reference events for shadow matching, also return
         weights."""
-
         if self.only_salt_s1:
             raise ValueError("Cannot only salt S1 when performing shadow matching!")
 
